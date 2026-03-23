@@ -9,9 +9,9 @@ namespace DataLabelProject.Application.Controllers;
 [Route("api/guidelines")]
 public class GuidelinesController : ControllerBase
 {
-    private readonly GuidelineService _guidelineService;
+    private readonly IGuidelineService _guidelineService;
 
-    public GuidelinesController(GuidelineService guidelineService)
+    public GuidelinesController(IGuidelineService guidelineService)
     {
         _guidelineService = guidelineService;
     }

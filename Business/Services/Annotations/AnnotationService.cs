@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DataLabelProject.Application.DTOs.Annotations;
 using DataLabelProject.Application.DTOs.Common;
+using DataLabelProject.Application.DTOs.Consensus;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.Consensus;
@@ -234,72 +235,57 @@ public class AnnotationService : IAnnotationService
             .ToListAsync();
         var annotatorAssignmentCount = assignments.Count;
 
-        if (annotations.Count < annotatorAssignmentCount){
+        if (annotations.Count < annotatorAssignmentCount)
+        {
             System.Console.WriteLine($"Consensus cannot be calculated: {annotations.Count}/{annotatorAssignmentCount} annotations");
             return;
         }
 
-        var agreement = ComputeAgreement(annotations);
-        System.Console.WriteLine($"Agreement: {agreement}");
+        var boxes = BoxConversionHelper.FlattenBoxes(annotations);
+        if (boxes.Count == 0)
+            throw new InvalidOperationException("No bounding boxes found in submitted annotations");
 
-        var projectConfig = await _projectConfigRepository.GetByProjectIdAsync(taskItem.ProjectId);
-        var threshold = projectConfig?.AgreementThreshold ?? 0.6;
+        var distinctAnnotators = annotations.Select(a => a.AnnotatorId).Distinct().Count();
+        var clusters = _clusteringService.ClusterByIoU(boxes, DefaultIouThreshold);
+        var consensusBboxes = _agreementService.BuildConsensusBboxes(clusters);
 
-        if (agreement >= threshold)
+        if (consensusBboxes == null)
         {
-            System.Console.WriteLine("agreement > threshold");
-            // Mark all annotations as Resolved
-            foreach (var a in annotations)
-                a.Status = AnnotationStatus.Resolved;
-            await _annotationRepository.UpdateRangeAsync(annotations);
-            await _annotationRepository.SaveChangesAsync();
-
-            // Build consensus payload
-            var payload = BuildConsensusPayload(annotations, agreement);
-
-            await _consensusRepository.CreateAsync(new Models.Consensus
-            {
-                ConsensusId = Guid.NewGuid(),
-                DatasetItemId = taskItem.DatasetItemId,
-                Payload = payload,
-                CreatedAt = DateTime.UtcNow
-            });
-        }
-        else
-        {
-            System.Console.WriteLine("agreement < threshold");
-            // Mark all annotations as Conflicted
+            System.Console.WriteLine("Consensus conflict detected");
             foreach (var a in annotations)
                 a.Status = AnnotationStatus.Conflicted;
+
             await _annotationRepository.UpdateRangeAsync(annotations);
             await _annotationRepository.SaveChangesAsync();
 
             taskItem.RevisionCount++;
-
             if (taskItem.RevisionCount >= 3)
                 taskItem.Status = LabelingTaskItemStatus.Locked;
+
+            return;
         }
+
+        var agreement = _agreementService.CalculateOverallScore(clusters, distinctAnnotators);
+        System.Console.WriteLine($"Agreement: {agreement}");
+
+        foreach (var a in annotations)
+            a.Status = AnnotationStatus.Resolved;
+
+        await _annotationRepository.UpdateRangeAsync(annotations);
+        await _annotationRepository.SaveChangesAsync();
+
+        await _consensusRepository.CreateAsync(new Models.Consensus
+        {
+            ConsensusId = Guid.NewGuid(),
+            DatasetItemId = taskItem.DatasetItemId,
+            Payload = BuildConsensusPayload(consensusBboxes, agreement),
+            CreatedAt = DateTime.UtcNow
+        });
     }
 
-    // 6. Agreement computation - reuses AgreementService
-    private double ComputeAgreement(List<Annotation> annotations)
+    // 6. Build consensus payload with calculated agreement score.
+    private static string BuildConsensusPayload(List<ConsensusBboxDto> consensusBboxes, double agreementScore)
     {
-        var boxes = BoxConversionHelper.FlattenBoxes(annotations);
-        if (boxes.Count == 0)
-            return 0;
-
-        var distinctAnnotators = annotations.Select(a => a.AnnotatorId).Distinct().Count();
-        var clusters = _clusteringService.ClusterByIoU(boxes, DefaultIouThreshold);
-        return _agreementService.CalculateOverallScore(clusters, distinctAnnotators);
-    }
-
-    // 7. Build consensus payload - reuses ConsensusService helpers
-    private string BuildConsensusPayload(List<Annotation> annotations, double agreementScore)
-    {
-        var boxes = BoxConversionHelper.FlattenBoxes(annotations);
-        var clusters = _clusteringService.ClusterByIoU(boxes, DefaultIouThreshold);
-        var consensusBboxes = _agreementService.BuildConsensusBboxes(clusters);
-
         return JsonSerializer.Serialize(new
         {
             bboxes = consensusBboxes,

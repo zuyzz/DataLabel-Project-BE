@@ -3,7 +3,7 @@ namespace DataLabelProject.Business.Services.Consensus;
 public interface IAgreementService
 {
 	double CalculateOverallScore(List<BoxCluster> clusters, int totalAnnotators);
-	List<ConsensusBboxDto> BuildConsensusBboxes(List<BoxCluster> clusters);
+	List<ConsensusBboxDto>? BuildConsensusBboxes(List<BoxCluster> clusters);
 }
 
 public class AgreementService : IAgreementService
@@ -19,50 +19,64 @@ public class AgreementService : IAgreementService
 
 		var clusterScores = clusters.Select(cluster =>
 		{
-			var majorityLabel = cluster.Members
+			var labelVotes = cluster.Members
 				.GroupBy(m => m.Label)
-				.OrderByDescending(g => g.Count())
-				.First().Key;
-
-			var majorityVotes = cluster.Members
-				.Where(m => m.Label == majorityLabel)
-				.Select(m => m.AnnotatorId)
-				.Distinct()
-				.Count();
+				.Select(g => g.Select(m => m.AnnotatorId).Distinct().Count())
+				.DefaultIfEmpty(0)
+				.Max();
 
 			var totalVoters = cluster.Members
 				.Select(m => m.AnnotatorId)
 				.Distinct()
 				.Count();
 
-			return (double)majorityVotes / totalVoters;
+			if (totalVoters == 0)
+				return 0d;
+
+			return (double)labelVotes / totalVoters;
 		});
 
 		return clusterScores.Average();
 	}
 
-	public List<ConsensusBboxDto> BuildConsensusBboxes(List<BoxCluster> clusters)
+	public List<ConsensusBboxDto>? BuildConsensusBboxes(List<BoxCluster> clusters)
 	{
-		return clusters.Select(cluster =>
-		{
-			var labelGroup = cluster.Members
-				.GroupBy(m => m.Label)
-				.OrderByDescending(g => g.Count())
-				.First();
+		var result = new List<ConsensusBboxDto>();
 
-			var majorLabelMembers = cluster.Members
-				.Where(m => m.Label == labelGroup.Key)
+		foreach (var cluster in clusters)
+		{
+			var labelGroups = cluster.Members
+				.GroupBy(m => m.Label)
+				.Select(g => new
+				{
+					Label = g.Key,
+					Members = g.ToList(),
+					VoteCount = g.Select(m => m.AnnotatorId).Distinct().Count()
+				})
+				.OrderByDescending(g => g.VoteCount)
+				.ThenBy(g => g.Label)
 				.ToList();
 
-			return new ConsensusBboxDto
+			if (labelGroups.Count == 0)
+				continue;
+
+			var top = labelGroups[0];
+			var isTie = labelGroups.Count > 1 && labelGroups[1].VoteCount == top.VoteCount;
+
+			if (isTie)
+				return null;
+
+			result.Add(new ConsensusBboxDto
 			{
-				Label = labelGroup.Key,
-				X = majorLabelMembers.Average(m => m.X),
-				Y = majorLabelMembers.Average(m => m.Y),
-				Width = majorLabelMembers.Average(m => m.Width),
-				Height = majorLabelMembers.Average(m => m.Height),
-				Support = majorLabelMembers.Select(m => m.AnnotatorId).Distinct().Count()
-			};
-		}).ToList();
+				Label = top.Label,
+				X = top.Members.Average(m => m.X),
+				Y = top.Members.Average(m => m.Y),
+				Width = top.Members.Average(m => m.Width),
+				Height = top.Members.Average(m => m.Height),
+				Support = top.VoteCount
+			});
+		}
+
+		return result;
 	}
 }
