@@ -372,33 +372,38 @@ public class ExportService : IExportService
             using var doc = JsonDocument.Parse(payload);
             var root = doc.RootElement;
 
-            // Allow payload structures like { objects: [...] } or { originalPayload: { objects: [...] } }
-            if (root.TryGetProperty("objects", out var objectsElement) ||
-                (root.TryGetProperty("originalPayload", out var original) && original.ValueKind == JsonValueKind.Object && original.TryGetProperty("objects", out objectsElement)))
+            if (!root.TryGetProperty("bboxes", out var bboxesElement) ||
+                bboxesElement.ValueKind != JsonValueKind.Array)
             {
-                var objects = new List<ConsensusObject>();
-
-                foreach (var obj in objectsElement.EnumerateArray())
-                {
-                    objects.Add(new ConsensusObject
-                    {
-                        Label = obj.GetProperty("label").GetString() ?? "",
-                        X = obj.GetProperty("x").GetDouble(),
-                        Y = obj.GetProperty("y").GetDouble(),
-                        W = obj.GetProperty("w").GetDouble(),
-                        H = obj.GetProperty("h").GetDouble()
-                    });
-                }
-
-                return objects;
+                return null;
             }
+
+            var objects = new List<ConsensusObject>();
+
+            foreach (var obj in bboxesElement.EnumerateArray())
+            {
+                objects.Add(new ConsensusObject
+                {
+                    Label = obj.GetProperty("Label").GetString() ?? "",
+                    X = obj.GetProperty("X").GetDouble(),
+                    Y = obj.GetProperty("Y").GetDouble(),
+                    W = obj.GetProperty("Width").GetDouble(),
+                    H = obj.GetProperty("Height").GetDouble()
+                });
+            }
+
+            return objects;
         }
         catch (JsonException)
         {
-            // Invalid payload, skip
+            // Invalid JSON
+            return null;
         }
-
-        return null;
+        catch (Exception)
+        {
+            // Missing fields or wrong format
+            return null;
+        }
     }
 
     private static (int Width, int Height) ParseImageDimensions(string metadata)
