@@ -2,6 +2,7 @@ using DataLabelProject.Application.DTOs.Tasks;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.Users;
+using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Data.Repositories.Abstractions;
 
 namespace DataLabelProject.Business.Services.Assignments;
@@ -18,6 +19,7 @@ public class AssignmentService : IAssignmentService
     private readonly IDatasetRepository _datasetRepo;
     private readonly IDatasetItemRepository _datasetItemRepo;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IActivityLogService _activityLog;
 
     public AssignmentService(
         ILabelingTaskRepository taskRepo,
@@ -29,7 +31,8 @@ public class AssignmentService : IAssignmentService
         IProjectMemberRepository projectMemberRepo,
         IDatasetRepository datasetRepo,
         IDatasetItemRepository datasetItemRepo,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IActivityLogService activityLog)
     {
         _taskRepo = taskRepo;
         _taskItemRepo = taskItemRepo;
@@ -41,6 +44,7 @@ public class AssignmentService : IAssignmentService
         _datasetRepo = datasetRepo;
         _datasetItemRepo = datasetItemRepo;
         _currentUserService = currentUserService;
+        _activityLog = activityLog;
     }
 
     public async Task<BulkTaskAssignmentResponse> AssignTaskAsync(
@@ -149,6 +153,11 @@ public class AssignmentService : IAssignmentService
         await _taskItemRepo.SaveChangesAsync();
         await _assignmentRepo.SaveChangesAsync();
         await _datasetRepo.SaveChangesAsync();
+
+        await _activityLog.LogAsync(request.ProjectId, assignedBy, "TASK_CREATED", "LabelingTask", task.TaskId, null);
+
+        foreach (var a in assignments)
+            await _activityLog.LogAsync(request.ProjectId, assignedBy, "ASSIGNMENT_CREATED", "Assignment", a.AssignmentId, new { assignedTo = a.AssignedTo });
 
         return new BulkTaskAssignmentResponse
         {

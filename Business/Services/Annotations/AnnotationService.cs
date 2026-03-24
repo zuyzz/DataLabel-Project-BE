@@ -6,6 +6,7 @@ using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.Consensus;
 using DataLabelProject.Business.Services.Shared;
+using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Data.Repositories.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,6 +23,7 @@ public class AnnotationService : IAnnotationService
     private readonly IConsensusRepository _consensusRepository;
     private readonly IClusteringService _clusteringService;
     private readonly IAgreementService _agreementService;
+    private readonly IActivityLogService _activityLog;
 
     public AnnotationService(
         IAnnotationRepository annotationRepository,
@@ -30,7 +32,8 @@ public class AnnotationService : IAnnotationService
         IProjectConfigRepository projectConfigRepository,
         IConsensusRepository consensusRepository,
         IClusteringService clusteringService,
-        IAgreementService agreementService)
+        IAgreementService agreementService,
+        IActivityLogService activityLog)
     {
         _annotationRepository = annotationRepository;
         _taskItemRepository = taskItemRepository;
@@ -39,6 +42,7 @@ public class AnnotationService : IAnnotationService
         _consensusRepository = consensusRepository;
         _clusteringService = clusteringService;
         _agreementService = agreementService;
+        _activityLog = activityLog;
     }
 
     // 2.1 Get annotations by task item
@@ -150,6 +154,8 @@ public class AnnotationService : IAnnotationService
             await CheckConsensusAsync(taskItem);
             await _annotationRepository.SaveChangesAsync();
 
+            await _activityLog.LogAsync(taskItem.ProjectId, currentUserId, "ANNOTATION_SUBMITTED", "Annotation", annotation.AnnotationId, new { taskItemId = taskItem.TaskItemId });
+
             responses.Add(MapToResponse(annotation));
         }
 
@@ -179,6 +185,8 @@ public class AnnotationService : IAnnotationService
         System.Console.WriteLine("startcheck consensus");
         await CheckConsensusAsync(taskItem);
         await _annotationRepository.SaveChangesAsync();
+
+        await _activityLog.LogAsync(taskItem.ProjectId, currentUserId, "ANNOTATION_UPDATED", "Annotation", annotation.AnnotationId, null);
 
         return MapToResponse(annotation);
     }

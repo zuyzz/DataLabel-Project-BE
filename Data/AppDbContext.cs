@@ -28,8 +28,6 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<DatasetItem> DatasetItems { get; set; }
 
-    public virtual DbSet<ExportJob> ExportJobs { get; set; }
-
     public virtual DbSet<Guideline> Guidelines { get; set; }
 
     public virtual DbSet<Label> Labels { get; set; }
@@ -79,8 +77,6 @@ public partial class AppDbContext : DbContext
 
             // project/dataset media type enum
             .HasPostgresEnum("public", "enum_media_type", new[] { "image", "audio", "video" })
-            // export job status enum
-            .HasPostgresEnum<ExportJobStatus>("public", "enum_export_job_status")
             // labeling task status enum
             .HasPostgresEnum<LabelingTaskStatus>("public", "enum_task_status")
             // labeling task item status enum

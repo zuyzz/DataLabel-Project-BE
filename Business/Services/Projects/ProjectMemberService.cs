@@ -6,6 +6,7 @@ using DataLabelProject.Shared.Extensions;
 using Microsoft.EntityFrameworkCore;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Application.DTOs.Users;
+using DataLabelProject.Business.Services.ActivityLogs;
 
 namespace DataLabelProject.Business.Services.Projects;
 
@@ -14,15 +15,18 @@ public class ProjectMemberService : IProjectMemberService
     private readonly IProjectRepository _projectRepository;
     private readonly IProjectMemberRepository _projectMemberRepository;
     private readonly IAssignmentRepository _assignmentRepository;
+    private readonly IActivityLogService _activityLog;
 
     public ProjectMemberService(
         IProjectRepository projectRepository,
         IProjectMemberRepository projectMemberRepository,
-        IAssignmentRepository assignmentRepository)
+        IAssignmentRepository assignmentRepository,
+        IActivityLogService activityLog)
     {
         _projectRepository = projectRepository;
         _projectMemberRepository = projectMemberRepository;
         _assignmentRepository = assignmentRepository;
+        _activityLog = activityLog;
     }
 
     public async Task AddUserToProject(Guid userId, Guid projectId)
@@ -40,6 +44,8 @@ public class ProjectMemberService : IProjectMemberService
 
         await _projectMemberRepository.CreateAsync(member);
         await _projectMemberRepository.SaveChangesAsync();
+
+        await _activityLog.LogAsync(projectId, null, "MEMBER_ADDED", "ProjectMember", userId, new { memberId = userId });
     }
 
     public async Task RemoveUserFromProject(Guid userId, Guid projectId)
@@ -50,6 +56,8 @@ public class ProjectMemberService : IProjectMemberService
 
         await _projectMemberRepository.DeleteAsync(member);
         await _projectMemberRepository.SaveChangesAsync();
+
+        await _activityLog.LogAsync(projectId, null, "MEMBER_REMOVED", "ProjectMember", userId, new { memberId = userId });
     }
 
     public async Task<PagedResponse<UserResponse>> GetUserFromProject(Guid projectId, ProjectMemberQueryParameters @params)

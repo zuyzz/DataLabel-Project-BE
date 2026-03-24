@@ -3,6 +3,7 @@ using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Labels;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Services.Users;
+using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Data.Repositories.Abstractions;
 using DataLabelProject.Shared.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -15,17 +16,20 @@ public class LabelService : ILabelService
     private readonly IProjectRepository _projectRepository;
     private readonly IProjectLabelRepository _projectLabelRepository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IActivityLogService _activityLog;
 
     public LabelService(
         ILabelRepository labelRepository,
         IProjectRepository projectRepository,
         IProjectLabelRepository projectLabelRepository,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IActivityLogService activityLog)
     {
         _labelRepository = labelRepository;
         _projectRepository = projectRepository;
         _projectLabelRepository = projectLabelRepository;
         _currentUserService = currentUserService;
+        _activityLog = activityLog;
     }
 
     public async Task<PagedResponse<LabelResponse>> GetLabels(LabelQueryParameters @params)
@@ -210,6 +214,8 @@ public class LabelService : ILabelService
 
         await _projectLabelRepository.CreateAsync(projectLabel);
         await _projectLabelRepository.SaveChangesAsync();
+
+        await _activityLog.LogAsync(projectId, currentUserId, "LABEL_ATTACHED", "ProjectLabel", labelId, new { labelId });
     }
 
     public async Task RemoveLabelFromProject(Guid labelId, Guid projectId)
@@ -229,6 +235,8 @@ public class LabelService : ILabelService
 
         await _projectLabelRepository.DeleteAsync(projectLabel);
         await _projectLabelRepository.SaveChangesAsync();
+
+        await _activityLog.LogAsync(projectId, currentUserId, "LABEL_DETACHED", "ProjectLabel", labelId, new { labelId });
     }
 
     private LabelResponse MapToResponse(Label label)
