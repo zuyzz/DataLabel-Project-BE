@@ -1,6 +1,7 @@
 using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Users;
 using DataLabelProject.Business.Models;
+using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Data.Repositories.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,19 +14,22 @@ public class UserService : IUserService
     private readonly IRoleRepository _roleRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IActivityLogService _activityLog;
 
     public UserService(
         IUserRepository userRepository,
         IProjectMemberRepository memberRepository,
         IRoleRepository roleRepository,
         ICurrentUserService currentUserService,
-        IRefreshTokenRepository refreshTokenRepository)
+        IRefreshTokenRepository refreshTokenRepository,
+        IActivityLogService activityLog)
     {
         _userRepository = userRepository;
         _memberRepository = memberRepository;
         _roleRepository = roleRepository;
         _currentUserService = currentUserService;
         _refreshTokenRepository = refreshTokenRepository;
+        _activityLog = activityLog;
     }
 
     public async Task<PagedResponse<UserResponse>> GetUsers(UserQueryParameters @params)

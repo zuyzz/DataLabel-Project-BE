@@ -39,6 +39,7 @@ using DataLabelProject.Business.Events.Dispatcher;
 using DataLabelProject.Business.Events.DomainEvents.Project;
 using DataLabelProject.Business.Events.Handlers.ProjectConfigs;
 using DataLabelProject.Business.Events.Handlers.Guidelines;
+using DataLabelProject.Business.Services.ActivityLogs;
 
 namespace DataLabelProject.Infrastructure.Extensions;
 
@@ -92,6 +93,7 @@ public static class ServiceExtensions
         services.AddScoped<IIoUService, IoUService>();
         services.AddScoped<IExportService, ExportService>();
         services.AddScoped<IStatisticsService, StatisticsService>();
+        services.AddScoped<IActivityLogService, ActivityLogService>();
 
         // File upload strategies
         services.AddScoped<IFileUploadStrategy, ImageUploadStrategy>();

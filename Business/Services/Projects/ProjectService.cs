@@ -5,6 +5,7 @@ using DataLabelProject.Data.Repositories.Abstractions;
 using DataLabelProject.Business.Services.Users;
 using DataLabelProject.Business.Events.Abstraction;
 using DataLabelProject.Business.Events.DomainEvents.Project;
+using DataLabelProject.Business.Services.ActivityLogs;
 using Microsoft.EntityFrameworkCore;
 using DataLabelProject.Shared.Extensions;
 
@@ -18,6 +19,7 @@ public class ProjectService : IProjectService
     private readonly IProjectConfigRepository _configRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IEventDispatcher _eventDispatcher;
+    private readonly IActivityLogService _activityLog;
 
     public ProjectService (
         IProjectRepository projectRepository,
@@ -25,7 +27,8 @@ public class ProjectService : IProjectService
         ICategoryRepository categoryRepository,
         IProjectConfigRepository configRepository,
         ICurrentUserService currentUserService,
-        IEventDispatcher eventDispatcher)
+        IEventDispatcher eventDispatcher,
+        IActivityLogService activityLog)
     {
         _projectRepository = projectRepository;
         _memberRepository = memberRepository;
@@ -33,6 +36,7 @@ public class ProjectService : IProjectService
         _configRepository = configRepository;
         _currentUserService = currentUserService;
         _eventDispatcher = eventDispatcher;
+        _activityLog = activityLog;
     }
 
     public async Task<PagedResponse<ProjectResponse>> GetProjects(
@@ -146,6 +150,8 @@ public class ProjectService : IProjectService
 
         await _eventDispatcher.DispatchAsync(new ProjectCreatedEvent(project.ProjectId));
 
+        await _activityLog.LogAsync(project.ProjectId, currentUserId, "PROJECT_CREATED", "Project", project.ProjectId, new { name = project.Name });
+
         project = await _projectRepository.GetByIdAsync(project.ProjectId);
 
         return MapToResponse(project!);
@@ -178,6 +184,11 @@ public class ProjectService : IProjectService
 
         await _projectRepository.UpdateAsync(project);
         await _projectRepository.SaveChangesAsync();
+
+        if (request.IsActive.HasValue && !request.IsActive.Value)
+            await _activityLog.LogAsync(project.ProjectId, currentUserId, "PROJECT_DEACTIVATED", "Project", project.ProjectId, null);
+        else
+            await _activityLog.LogAsync(project.ProjectId, currentUserId, "PROJECT_UPDATED", "Project", project.ProjectId, null);
 
         return MapToResponse(project);
     }

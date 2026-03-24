@@ -4,6 +4,7 @@ using DataLabelProject.Data.Repositories.Abstractions;
 using DataLabelProject.Business.Services.FileUpload;
 using DataLabelProject.Business.Services.Storage;
 using DataLabelProject.Business.Services.Users;
+using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Application.DTOs.Common;
 using Microsoft.EntityFrameworkCore;
 using DataLabelProject.Shared.Extensions;
@@ -19,6 +20,7 @@ public class DatasetService : IDatasetService
     private readonly ILabelingTaskItemRepository _taskItemRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IFileStorage _fileStorage;
+    private readonly IActivityLogService _activityLog;
 
     public DatasetService(
         IDatasetRepository datasetRepository,
@@ -27,7 +29,8 @@ public class DatasetService : IDatasetService
         IProjectMemberRepository memberRepository,
         ILabelingTaskItemRepository taskItemRepository,
         ICurrentUserService currentUserService,
-        IFileStorage fileStorage)
+        IFileStorage fileStorage,
+        IActivityLogService activityLog)
     {
         _datasetRepository = datasetRepository;
         _datasetItemRepository = datasetItemRepository;
@@ -36,6 +39,7 @@ public class DatasetService : IDatasetService
         _taskItemRepository = taskItemRepository;
         _currentUserService = currentUserService;
         _fileStorage = fileStorage;
+        _activityLog = activityLog;
     }
 
     public async Task<DatasetResponse> CreateDataset(CreateDatasetRequest request)
@@ -241,6 +245,8 @@ public class DatasetService : IDatasetService
         
         await _datasetRepository.SaveChangesAsync();
         await _taskItemRepository.SaveChangesAsync();
+
+        await _activityLog.LogAsync(projectId, currentUserId, "DATASET_ATTACHED", "Dataset", datasetId, new { datasetId });
     }
 
     public async Task RemoveDatasetFromProject(Guid datasetId, Guid projectId)
@@ -273,6 +279,8 @@ public class DatasetService : IDatasetService
         dataset.ProjectId = null;
 
         await _datasetRepository.SaveChangesAsync();
+
+        await _activityLog.LogAsync(projectId, currentUserId, "DATASET_DETACHED", "Dataset", datasetId, new { datasetId });
     }
 
     private DatasetResponse MapToResponse(Dataset dataset)

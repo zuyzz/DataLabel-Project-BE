@@ -6,6 +6,7 @@ using DataLabelProject.Application.DTOs.Tasks;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.Users;
+using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Data.Repositories.Abstractions;
 using DataLabelProject.Shared.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -18,17 +19,20 @@ namespace DataLabelProject.Business.Services.Reviews
         private readonly ILabelingTaskItemRepository _taskItemRepository;
         private readonly IConsensusRepository _consensusRepository;
         private readonly ICurrentUserService _currentUserService;
+        private readonly IActivityLogService _activityLog;
 
         public ReviewService(
             IReviewRepository reviewRepository,
             ILabelingTaskItemRepository taskItemRepository,
             IConsensusRepository consensusRepository,
-            ICurrentUserService currentUserService)
+            ICurrentUserService currentUserService,
+            IActivityLogService activityLog)
         {
             _reviewRepository = reviewRepository;
             _taskItemRepository = taskItemRepository;
             _consensusRepository = consensusRepository;
             _currentUserService = currentUserService;
+            _activityLog = activityLog;
         }
 
         public async Task<PagedResponse<ReviewResponse>> GetReviewsAsync(
@@ -175,6 +179,8 @@ namespace DataLabelProject.Business.Services.Reviews
 
             await _reviewRepository.SaveChangesAsync();
             await _taskItemRepository.SaveChangesAsync();
+
+            await _activityLog.LogAsync(taskItem.ProjectId, reviewerId, "REVIEW_SUBMITTED", "Review", review.ReviewId, new { result = review.Result.ToString() });
 
             return MapToResponse(review);
         }

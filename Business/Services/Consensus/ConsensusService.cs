@@ -4,6 +4,7 @@ using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Consensus;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Services.Shared;
+using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Data;
 using DataLabelProject.Data.Repositories.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,7 @@ public class ConsensusService : IConsensusService
 	private readonly IClusteringService _clusteringService;
 	private readonly IAgreementService _agreementService;
 	private readonly AppDbContext _context;
+	private readonly IActivityLogService _activityLog;
 
 	public ConsensusService(
 		IConsensusRepository consensusRepository,
@@ -27,7 +29,8 @@ public class ConsensusService : IConsensusService
 		ILabelingTaskItemRepository taskRepository,
 		IClusteringService clusteringService,
 		IAgreementService agreementService,
-		AppDbContext context)
+		AppDbContext context,
+		IActivityLogService activityLog)
 	{
 		_consensusRepository = consensusRepository;
 		_annotationRepository = annotationRepository;
@@ -35,6 +38,7 @@ public class ConsensusService : IConsensusService
 		_clusteringService = clusteringService;
 		_agreementService = agreementService;
 		_context = context;
+		_activityLog = activityLog;
 	}
 
 	public async Task<ConsensusResponse> CreateConsensusAsync(Guid taskId, ConsensusCreateRequest request)
@@ -57,7 +61,6 @@ public class ConsensusService : IConsensusService
 			.OrderByDescending(pc => pc.ProjectConfigId)
 			.FirstOrDefaultAsync();
 
-		var threshold = projectConfig?.AgreementThreshold ?? 0.8;
 		var minimumAnnotations = projectConfig?.AnnotationsPerSample ?? 3;
 
 		if (distinctAnnotatorCount < minimumAnnotations)
@@ -69,22 +72,30 @@ public class ConsensusService : IConsensusService
 			throw new InvalidOperationException("No bounding boxes found in approved annotations");
 
 		var clusters = _clusteringService.ClusterByIoU(allBoxes, DefaultIouThreshold);
+		var consensusBoxes = _agreementService.BuildConsensusBboxes(clusters);
+
+		if (consensusBoxes == null)
+		{
+			foreach (var annotation in annotationsWithPayload)
+			{
+				annotation.Status = Business.Models.Enums.AnnotationStatus.Conflicted;
+			}
+
+			await _annotationRepository.UpdateRangeAsync(annotationsWithPayload);
+			throw new InvalidOperationException("Consensus conflict detected (tie in voting)");
+		}
+
 		var calculatedScore = _agreementService.CalculateOverallScore(clusters, distinctAnnotatorCount);
 
-		var finalScore = request.AgreementScore ?? calculatedScore;
 		if (request.AgreementScore.HasValue && Math.Abs(request.AgreementScore.Value - calculatedScore) > 0.0001)
 			throw new ArgumentException("Provided agreementScore does not match calculated agreement score");
-
-		if (finalScore < threshold)
-			throw new InvalidOperationException(
-				$"Agreement score {finalScore:F4} is below threshold {threshold:F4}; escalate to reviewer");
 
 		var payloadJson = request.Payload.HasValue
 			? request.Payload.Value.GetRawText()
 			: JsonSerializer.Serialize(new
 			{
-				bboxes = _agreementService.BuildConsensusBboxes(clusters),
-				agreementScore = finalScore
+				bboxes = consensusBoxes,
+				agreementScore = calculatedScore
 			});
 
 		var consensus = new Business.Models.Consensus
@@ -96,6 +107,9 @@ public class ConsensusService : IConsensusService
 		};
 
 		var created = await _consensusRepository.CreateAsync(consensus);
+
+		await _activityLog.LogAsync(task.ProjectId, null, "CONSENSUS_CREATED", "Consensus", consensus.ConsensusId, new { datasetItemId = taskId });
+
 		return MapToDto(created);
 	}
 

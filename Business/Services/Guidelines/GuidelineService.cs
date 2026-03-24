@@ -2,6 +2,7 @@ using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Guidelines;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Services.Users;
+using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Data.Repositories.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,15 +13,18 @@ public class GuidelineService : IGuidelineService
     private readonly IGuidelineRepository _guidelineRepository;
     private readonly IProjectMemberRepository _memberRepository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IActivityLogService _activityLog;
 
     public GuidelineService(
         IGuidelineRepository guidelineRepository,
         IProjectMemberRepository memberRepository,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IActivityLogService activityLog)
     {
         _guidelineRepository = guidelineRepository;
         _memberRepository = memberRepository;
         _currentUserService = currentUserService;
+        _activityLog = activityLog;
     }
 
     public async Task<PagedResponse<GuidelineResponse>> GetGuidelines(GuidelineQueryParameters @params)
@@ -83,6 +87,8 @@ public class GuidelineService : IGuidelineService
 
         await _guidelineRepository.UpdateAsync(guideline);
         await _guidelineRepository.SaveChangesAsync();
+
+        await _activityLog.LogAsync(guideline.ProjectId, _currentUserService.UserId, "GUIDELINE_UPDATED", "Guideline", guideline.GuidelineId, null);
 
         return MapToResponse(guideline);
     }
