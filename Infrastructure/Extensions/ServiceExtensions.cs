@@ -28,7 +28,6 @@ using DataLabelProject.Business.Services.Tasks;
 using DataLabelProject.Business.Services.Assignments;
 using DataLabelProject.Business.Services.TaskItems;
 using DataLabelProject.Business.Services.Exports;
-using DataLabelProject.Data.Repositories.Implementations.ExportJobs;
 using DataLabelProject.Data.Repositories.Implementations.Reviews;
 using DataLabelProject.Business.Services.Reviews;
 using DataLabelProject.Data.Repositories.Implementations.Consensus;
@@ -69,7 +68,6 @@ public static class ServiceExtensions
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IConsensusRepository, ConsensusRepository>();
         services.AddScoped<IProjectConfigRepository, ProjectConfigRepository>();
-        services.AddScoped<IExportJobRepository, ExportJobRepository>();
 
         // Services
         services.AddScoped<IJwtTokenService, JwtTokenService>();

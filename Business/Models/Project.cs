@@ -21,8 +21,6 @@ public partial class Project
 
     public virtual ICollection<ActivityLog> ActivityLogs { get; set; } = new List<ActivityLog>();
 
-    public virtual ICollection<ExportJob> ExportJobs { get; set; } = new List<ExportJob>();
-
     public virtual ICollection<Guideline> Guidelines { get; set; } = new List<Guideline>();
 
     public virtual ICollection<LabelingTask> Tasks { get; set; } = new List<LabelingTask>();
