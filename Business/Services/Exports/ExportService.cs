@@ -148,7 +148,39 @@ public class ExportService : IExportService
 
     private (Stream Stream, string ContentType, string FileName) GenerateJson(ExportDataset dataset)
     {
-        var json = JsonSerializer.Serialize(dataset, JsonOptions);
+        // Group annotations by image
+        var annotationsByImage = dataset.Annotations
+            .GroupBy(a => a.ImageId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Create category lookup
+        var categoryLookup = dataset.Categories.ToDictionary(c => c.Id, c => c.Name);
+
+        // Build simplified format
+        var output = dataset.Images.Select(img =>
+        {
+            object labels;
+            if (annotationsByImage.TryGetValue(img.Id, out var annotations))
+            {
+                labels = annotations.Select(a => new
+                {
+                    @class = categoryLookup[a.CategoryId],
+                    bbox = new[] { (int)a.Bbox[0], (int)a.Bbox[1], (int)a.Bbox[2], (int)a.Bbox[3] }
+                }).ToList();
+            }
+            else
+            {
+                labels = new List<object>();
+            }
+
+            return new
+            {
+                image = img.FileName,
+                labels
+            };
+        }).ToList();
+
+        var json = JsonSerializer.Serialize(output, JsonOptions);
         var bytes = System.Text.Encoding.UTF8.GetBytes(json);
 
         var stream = new MemoryStream(bytes);
