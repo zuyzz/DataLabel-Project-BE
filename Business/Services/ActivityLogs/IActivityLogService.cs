@@ -1,3 +1,6 @@
+using DataLabelProject.Application.DTOs.ActivityLogs;
+using DataLabelProject.Application.DTOs.Common;
+
 namespace DataLabelProject.Business.Services.ActivityLogs;
 
 public interface IActivityLogService
@@ -9,4 +12,6 @@ public interface IActivityLogService
         string targetEntity,
         Guid? targetId,
         object? details = null);
+
+    Task<PagedResponse<ActivityLogResponse>> GetActivityLogs(ActivityLogQueryParameters @params);
 }
