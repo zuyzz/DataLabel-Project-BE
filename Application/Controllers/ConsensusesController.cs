@@ -17,24 +17,20 @@ public class ConsensusesController : ControllerBase
         _consensusService = consensusService;
     }
 
-    [HttpPost("{taskId:guid}")]
+    [HttpPost]
     [Authorize(Roles = "admin,manager")]
-    public async Task<IActionResult> CreateConsensus([FromRoute] Guid taskId, [FromBody] ConsensusCreateRequest request)
+    public async Task<IActionResult> CreateConsensus([FromBody] ConsensusCreateRequest request)
     {
         try
         {
-            var result = await _consensusService.CreateConsensusAsync(taskId, request);
+            var result = await _consensusService.CreateConsensusAsync(request);
             return StatusCode(201, result);
         }
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
             return BadRequest(new { message = ex.Message });
         }

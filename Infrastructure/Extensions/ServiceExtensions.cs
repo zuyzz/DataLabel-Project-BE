@@ -28,6 +28,7 @@ using DataLabelProject.Business.Services.Tasks;
 using DataLabelProject.Business.Services.Assignments;
 using DataLabelProject.Business.Services.TaskItems;
 using DataLabelProject.Business.Services.Exports;
+using DataLabelProject.Business.Services.Exports.DatasetBuilder;
 using DataLabelProject.Data.Repositories.Implementations.Reviews;
 using DataLabelProject.Business.Services.Reviews;
 using DataLabelProject.Data.Repositories.Implementations.Consensus;
@@ -92,6 +93,10 @@ public static class ServiceExtensions
         services.AddScoped<IClusteringService, ClusteringService>();
         services.AddScoped<IIoUService, IoUService>();
         services.AddScoped<IExportService, ExportService>();
+        services.AddScoped<IDatasetBuilder, DataLabelProject.Business.Services.Exports.DatasetBuilder.DatasetBuilder>();
+        services.AddScoped<IExportStrategy, JsonExportStrategy>();
+        services.AddScoped<IExportStrategy, CocoExportStrategy>();
+        services.AddScoped<IExportStrategy, YoloExportStrategy>();
         services.AddScoped<IStatisticsService, StatisticsService>();
         services.AddScoped<IActivityLogService, ActivityLogService>();
 
