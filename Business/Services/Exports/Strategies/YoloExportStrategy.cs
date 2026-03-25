@@ -5,9 +5,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using DataLabelProject.Application.DTOs.Exports;
+using DataLabelProject.Business.Services.Storage;
 
 public class YoloExportStrategy : IExportStrategy
 {
+    private readonly IFileStorage _fileStorage;
+
+    public YoloExportStrategy(IFileStorage fileStorage)
+    {
+        _fileStorage = fileStorage;
+    }
+
     public string Format => "yolo";
 
     public async Task<(Stream Stream, string ContentType, string FileName)> GenerateAsync(ExportDataset dataset, CreateExportRequest request)
@@ -53,10 +61,24 @@ public class YoloExportStrategy : IExportStrategy
     {
         foreach (var image in images)
         {
-            // NOTE: Không có logic download ảnh từ storage ở đây, chỉ tạo file label
-            // Nếu muốn download ảnh, cần inject IFileStorage vào strategy này
+            // Download and add image to ZIP
+            try
+            {
+                var (imageStream, contentType, fileName) = await _fileStorage.GetFileStreamAsync(image.StorageUri);
+                var imageEntry = archive.CreateEntry($"images/{setName}/{image.FileName}");
 
-            // Generate label file: labels/train/filename.txt hoặc labels/val/filename.txt
+                using var imageEntryStream = imageEntry.Open();
+                await imageStream.CopyToAsync(imageEntryStream);
+                await imageStream.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log or skip if image cannot be downloaded
+                // Continue processing other images
+                System.Console.WriteLine($"Warning: Could not download image {image.FileName}: {ex.Message}");
+            }
+
+            // Generate label file: labels/train/filename.txt or labels/val/filename.txt
             var lines = new System.Collections.Generic.List<string>();
 
             if (annotationsByImage.TryGetValue(image.Id, out var annotations))
