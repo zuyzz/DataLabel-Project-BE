@@ -62,27 +62,35 @@ public class StatisticsController : ControllerBase
 
     // =============== Role-based Statistics ===============
 
-    [HttpGet("reviewer")]
-    [Authorize(Roles = "reviewer")]
-    public async Task<IActionResult> GetReviewerStats()
+    [HttpGet("reviewer/{reviewerId:guid}")]
+    [Authorize(Roles = "admin,manager,reviewer")]
+    public async Task<IActionResult> GetReviewerStats(Guid reviewerId)
     {
         var userId = GetCurrentUserId();
         if (userId == null)
             return Unauthorized(new { message = "Invalid user identity." });
 
-        var result = await _statisticsService.GetReviewerStatsAsync(userId.Value);
+        var role = GetCurrentUserRole();
+        if (role == "reviewer" && userId.Value != reviewerId)
+            return Forbid();
+
+        var result = await _statisticsService.GetReviewerStatsAsync(reviewerId);
         return Ok(result);
     }
 
-    [HttpGet("annotator")]
-    [Authorize(Roles = "annotator")]
-    public async Task<IActionResult> GetAnnotatorStats()
+    [HttpGet("annotator/{annotatorId:guid}")]
+    [Authorize(Roles = "admin,manager,annotator")]
+    public async Task<IActionResult> GetAnnotatorStats(Guid annotatorId)
     {
         var userId = GetCurrentUserId();
         if (userId == null)
             return Unauthorized(new { message = "Invalid user identity." });
 
-        var result = await _statisticsService.GetAnnotatorStatsAsync(userId.Value);
+        var role = GetCurrentUserRole();
+        if (role == "annotator" && userId.Value != annotatorId)
+            return Forbid();
+
+        var result = await _statisticsService.GetAnnotatorStatsAsync(annotatorId);
         return Ok(result);
     }
 

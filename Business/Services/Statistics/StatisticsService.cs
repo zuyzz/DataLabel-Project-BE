@@ -48,7 +48,7 @@ public class StatisticsService : IStatisticsService
 
         var totalTaskItems = await _context.LabelingTaskItems
             .AsNoTracking()
-            .CountAsync(ti => ti.ProjectId == projectId && ti.Status == LabelingTaskItemStatus.Assigned);
+            .CountAsync(ti => ti.ProjectId == projectId);
 
         var completedTaskItems = await _context.LabelingTaskItems
             .AsNoTracking()
