@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Consensus;
+using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Data;
 using DataLabelProject.Data.Repositories.Abstractions;
@@ -29,28 +30,33 @@ public class ConsensusService : IConsensusService
 
 	public async Task<ConsensusResponse> CreateConsensusAsync(ConsensusCreateRequest request)
 	{
-		var datasetItem = await _context.DatasetItems
-			.Include(di => di.ItemDataset)
-			.FirstOrDefaultAsync(di => di.DatasetItemId == request.DatasetItemId)
-			?? throw new KeyNotFoundException("Dataset item not found");
+		var taskItem = await _context.LabelingTaskItems
+			.Include(ti => ti.DatasetItem)
+				.ThenInclude(di => di.ItemDataset)
+			.FirstOrDefaultAsync(ti => ti.TaskItemId == request.TaskItemId)
+			?? throw new KeyNotFoundException("Task item not found.");
 
+		var datasetItemId = taskItem.DatasetItemId;
 		var payloadJson = request.Payload.GetRawText();
 
 		var consensus = new Business.Models.Consensus
 		{
 			ConsensusId = Guid.NewGuid(),
-			DatasetItemId = request.DatasetItemId,
+			DatasetItemId = datasetItemId,
 			Payload = payloadJson,
 			CreatedAt = DateTime.UtcNow
 		};
 
 		var created = await _consensusRepository.CreateAsync(consensus);
 
-		if (datasetItem.ItemDataset?.ProjectId is Guid projectId)
+		taskItem.Status = LabelingTaskItemStatus.Completed;
+		await _taskRepository.SaveChangesAsync();
+
+		if (taskItem.DatasetItem?.ItemDataset?.ProjectId is Guid projectId)
 		{
 			await _activityLog.LogAsync(
 				projectId, null, "CONSENSUS_CREATED", "Consensus",
-				consensus.ConsensusId, new { datasetItemId = request.DatasetItemId });
+				consensus.ConsensusId, new { taskItemId = request.TaskItemId, datasetItemId });
 		}
 
 		return MapToDto(created);
