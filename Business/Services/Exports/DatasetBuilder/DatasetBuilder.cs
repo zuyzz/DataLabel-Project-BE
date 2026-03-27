@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,11 +26,14 @@ public class DatasetBuilder : IDatasetBuilder
             .Select(di => di.DatasetItemId)
             .ToListAsync();
 
-        // Get the latest consensus per dataset item
+        // Get only approved consensuses
         var consensuses = await _context.Consensuses
-            .AsNoTracking()
-            .Where(c => datasetItemIds.Contains(c.DatasetItemId))
-            .ToListAsync();
+        .AsNoTracking()
+        .Include(c => c.Review)
+        .Where(c => datasetItemIds.Contains(c.DatasetItemId)
+                && c.Review != null
+                && c.Review.Result == ReviewResult.Approved)
+        .ToListAsync();
 
         var consensusByDatasetItemId = consensuses
             .GroupBy(c => c.DatasetItemId)
