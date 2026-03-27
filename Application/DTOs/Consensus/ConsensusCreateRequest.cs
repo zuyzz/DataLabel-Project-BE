@@ -7,7 +7,7 @@ namespace DataLabelProject.Application.DTOs.Consensus;
 public class ConsensusCreateRequest
 {
     [Required]
-    public Guid DatasetItemId { get; set; }
+    public Guid TaskItemId { get; set; }
 
     [Required]
     [JsonPropertyName("payload")]

@@ -50,7 +50,7 @@ public class StatisticsController : ControllerBase
     // =============== Project Statistics ===============
 
     [HttpGet("projects/{projectId}/overview")]
-    [Authorize(Roles = "admin,manager,annotator")]
+    [Authorize(Roles = "admin,manager,annotator,reviewer")]
     public async Task<IActionResult> GetProjectOverview(Guid projectId)
     {
         var accessCheck = await ValidateProjectAccessAsync(projectId);
@@ -60,58 +60,49 @@ public class StatisticsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("projects/{projectId}/dataset-coverage")]
+    // =============== Role-based Statistics ===============
+
+    [HttpGet("reviewer/{reviewerId:guid}")]
+    [Authorize(Roles = "admin,manager,reviewer")]
+    public async Task<IActionResult> GetReviewerStats(Guid reviewerId)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized(new { message = "Invalid user identity." });
+
+        var role = GetCurrentUserRole();
+        if (role == "reviewer" && userId.Value != reviewerId)
+            return Forbid();
+
+        var result = await _statisticsService.GetReviewerStatsAsync(reviewerId);
+        return Ok(result);
+    }
+
+    [HttpGet("annotator/{annotatorId:guid}")]
     [Authorize(Roles = "admin,manager,annotator")]
-    public async Task<IActionResult> GetDatasetCoverage(Guid projectId)
+    public async Task<IActionResult> GetAnnotatorStats(Guid annotatorId)
     {
-        var accessCheck = await ValidateProjectAccessAsync(projectId);
-        if (accessCheck != null) return accessCheck;
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized(new { message = "Invalid user identity." });
 
-        var result = await _statisticsService.GetDatasetCoverageAsync(projectId);
+        var role = GetCurrentUserRole();
+        if (role == "annotator" && userId.Value != annotatorId)
+            return Forbid();
+
+        var result = await _statisticsService.GetAnnotatorStatsAsync(annotatorId);
         return Ok(result);
     }
 
-    [HttpGet("projects/{projectId}/annotators")]
-    [Authorize(Roles = "admin,manager")]
-    public async Task<IActionResult> GetAnnotatorProductivity(Guid projectId)
+    [HttpGet("manager")]
+    [Authorize(Roles = "manager")]
+    public async Task<IActionResult> GetManagerStats()
     {
-        var accessCheck = await ValidateProjectAccessAsync(projectId);
-        if (accessCheck != null) return accessCheck;
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized(new { message = "Invalid user identity." });
 
-        var result = await _statisticsService.GetAnnotatorProductivityAsync(projectId);
-        return Ok(result);
-    }
-
-    [HttpGet("projects/{projectId}/agreement")]
-    [Authorize(Roles = "admin,manager,annotator")]
-    public async Task<IActionResult> GetAgreementDistribution(Guid projectId)
-    {
-        var accessCheck = await ValidateProjectAccessAsync(projectId);
-        if (accessCheck != null) return accessCheck;
-
-        var result = await _statisticsService.GetAgreementDistributionAsync(projectId);
-        return Ok(result);
-    }
-
-    [HttpGet("projects/{projectId}/reviewers")]
-    [Authorize(Roles = "admin,manager")]
-    public async Task<IActionResult> GetReviewerPerformance(Guid projectId)
-    {
-        var accessCheck = await ValidateProjectAccessAsync(projectId);
-        if (accessCheck != null) return accessCheck;
-
-        var result = await _statisticsService.GetReviewerPerformanceAsync(projectId);
-        return Ok(result);
-    }
-
-    [HttpGet("projects/{projectId}/labels")]
-    [Authorize(Roles = "admin,manager,annotator")]
-    public async Task<IActionResult> GetLabelDistribution(Guid projectId)
-    {
-        var accessCheck = await ValidateProjectAccessAsync(projectId);
-        if (accessCheck != null) return accessCheck;
-
-        var result = await _statisticsService.GetLabelDistributionAsync(projectId);
+        var result = await _statisticsService.GetManagerStatsAsync(userId.Value);
         return Ok(result);
     }
 
