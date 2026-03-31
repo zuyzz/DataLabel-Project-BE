@@ -42,9 +42,12 @@ public class StatisticsService : IStatisticsService
             .AsNoTracking()
             .CountAsync(d => d.ProjectId == projectId);
 
-        var assignedDatasets = await _context.Datasets
+        var totalDatasetItems = await _context.DatasetItems
             .AsNoTracking()
-            .CountAsync(d => d.ProjectId == projectId && !d.IsActive);
+            .CountAsync(di => 
+                di.ItemDataset.DatasetProject != null && 
+                di.ItemDataset.DatasetProject.ProjectId == projectId
+            );
 
         var totalTaskItems = await _context.LabelingTaskItems
             .AsNoTracking()
@@ -61,7 +64,7 @@ public class StatisticsService : IStatisticsService
             TotalMembers = totalMembers,
             TotalLabels = totalLabels,
             TotalDatasets = totalDatasets,
-            AssignedDatasets = assignedDatasets,
+            TotalDatasetItems = totalDatasetItems,
             CompletedTaskItems = completedTaskItems,
             TotalTaskItems = totalTaskItems,
             Progress = progress
@@ -108,37 +111,78 @@ public class StatisticsService : IStatisticsService
 
     public async Task<AnnotatorStatsDto> GetAnnotatorStatsAsync(Guid currentUserId)
     {
-        var assignedTaskItemIds = await _context.Assignments
+        var now = DateTime.UtcNow;
+        var today = now.Date;
+
+        var assignedTaskItemsQuery = _context.Assignments
             .AsNoTracking()
             .Where(a => a.AssignedTo == currentUserId)
-            .Join(_context.LabelingTasks, a => a.TaskId, t => t.TaskId, (a, t) => t)
-            .SelectMany(t => t.TaskItems.Select(ti => ti.TaskItemId))
-            .Distinct()
-            .ToListAsync();
+            .Join(
+                _context.LabelingTasks,
+                a => a.TaskId,
+                t => t.TaskId,
+                (a, t) => new { Assignment = a, Task = t }
+            )
+            .SelectMany(
+                x => x.Task.TaskItems,
+                (x, ti) => new
+                {
+                    TaskItem = ti,
+                    DeadlineAt = x.Assignment.DeadlineAt
+                }
+            );
 
-        var totalItems = assignedTaskItemIds.Count;
-
-        var annotations = await _context.Annotations
+        var annotationsQuery = _context.Annotations
             .AsNoTracking()
-            .Where(a => assignedTaskItemIds.Contains(a.TaskItemId) && a.AnnotatorId == currentUserId)
-            .ToListAsync();
+            .Where(a =>
+                a.AnnotatorId == currentUserId &&
+                assignedTaskItemsQuery
+                    .Select(ti => ti.TaskItem.TaskItemId)
+                    .Contains(a.TaskItemId)
+            );
 
-        var submittedItems = annotations.Count(a => a.Status == AnnotationStatus.Submitted);
-        var conflictedItems = annotations.Count(a => a.Status == AnnotationStatus.Conflicted);
-        var resolvedItems = annotations.Count(a => a.Status == AnnotationStatus.Resolved);
-        var incompletedItems = totalItems - annotations.Count;
+        var totalItems = await assignedTaskItemsQuery
+            .Select(x => x.TaskItem.TaskItemId)
+            .Distinct()
+            .CountAsync();
 
-        var today = DateTime.UtcNow.Date;
-        var todayAnnotationCount = annotations.Count(a => a.SubmittedAt?.Date == today);
+        var submittedItems = await annotationsQuery
+            .CountAsync(a => a.Status == AnnotationStatus.Submitted);
+
+        var completedItems = await annotationsQuery
+            .CountAsync(a => 
+                a.Status == AnnotationStatus.Conflicted ||
+                a.Status == AnnotationStatus.Resolved
+            );
+
+        var skippedItems = await annotationsQuery
+            .CountAsync(a => a.Status == AnnotationStatus.Skipped);
+
+        var expiredItems = await assignedTaskItemsQuery
+            .Where(x => 
+                x.DeadlineAt < now
+                && !_context.Annotations.Any(a =>
+                    a.TaskItemId == x.TaskItem.TaskItemId &&
+                    a.AnnotatorId == currentUserId)
+            )
+            .CountAsync();
+
+        var incompletedItems = totalItems - expiredItems - submittedItems - completedItems - skippedItems;
+
+        var todayCount = await annotationsQuery.CountAsync(a =>
+            a.SubmittedAt.HasValue &&
+            a.SubmittedAt.Value.Date == today
+        );
 
         return new AnnotatorStatsDto
         {
             TotalItems = totalItems,
             SubmittedItems = submittedItems,
-            ConflictedItems = conflictedItems,
-            ResolvedItems = resolvedItems,
+            CompletedItems = completedItems,
+            SkippedItems = skippedItems,
             IncompletedItems = incompletedItems,
-            TodayAnnotationCount = todayAnnotationCount
+            ExpiredItems = expiredItems,
+            TodayAnnotationCount = todayCount
         };
     }
 
@@ -146,6 +190,9 @@ public class StatisticsService : IStatisticsService
 
     public async Task<ManagerStatsDto> GetManagerStatsAsync(Guid currentUserId)
     {
+        var now = DateTime.UtcNow;
+        var todayDate = DateOnly.FromDateTime(now);
+
         var projects = await _context.Projects
             .AsNoTracking()
             .Where(p => p.CreatedBy == currentUserId)
@@ -153,10 +200,10 @@ public class StatisticsService : IStatisticsService
             .ToListAsync();
 
         var projectIds = projects.Select(p => p.ProjectId).ToList();
+
         var totalProjects = projects.Count;
         var activeProjects = projects.Count(p => p.IsActive);
 
-        // Get tasks grouped by project
         var tasksByProject = await _context.LabelingTasks
             .AsNoTracking()
             .Where(t => projectIds.Contains(t.ProjectId))
@@ -173,9 +220,11 @@ public class StatisticsService : IStatisticsService
         var incompletedProjects = tasksByProject.Count(t => t.HasOpened);
         var completedProjects = tasksByProject.Count(t => t.HasAny && t.AllClosed);
 
-        // Weekly performance: last 7 days
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var last7Days = Enumerable.Range(0, 7).Select(i => today.AddDays(-6 + i)).ToList();
+        var last7Days = Enumerable.Range(0, 7)
+            .Select(i => todayDate.AddDays(-6 + i))
+            .ToList();
+
+        var startDate = last7Days.First().ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
         var taskItemIds = await _context.LabelingTaskItems
             .AsNoTracking()
@@ -183,30 +232,58 @@ public class StatisticsService : IStatisticsService
             .Select(ti => ti.TaskItemId)
             .ToListAsync();
 
-        var totalWorkload = taskItemIds.Count;
-
-        var startDate = last7Days.First().ToDateTime(TimeOnly.MinValue);
-
         var annotationsByDate = await _context.Annotations
             .AsNoTracking()
-            .Where(a => taskItemIds.Contains(a.TaskItemId) && a.SubmittedAt != null && a.SubmittedAt >= startDate)
+            .Where(a =>
+                taskItemIds.Contains(a.TaskItemId) &&
+                a.SubmittedAt != null &&
+                a.SubmittedAt >= startDate
+            )
             .GroupBy(a => a.SubmittedAt!.Value.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .ToListAsync();
 
         var reviewsByDate = await _context.Reviews
             .AsNoTracking()
-            .Where(r => taskItemIds.Contains(r.TaskItemId) && r.ReviewedAt >= startDate)
+            .Where(r =>
+                taskItemIds.Contains(r.TaskItemId) &&
+                r.ReviewedAt >= startDate
+            )
             .GroupBy(r => r.ReviewedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .ToListAsync();
 
-        var weeklyPerformance = last7Days.Select(day => new WeeklyPerformanceDto
+        var annotationDict = annotationsByDate
+            .ToDictionary(a => DateOnly.FromDateTime(a.Date), a => a.Count);
+
+        var reviewDict = reviewsByDate
+            .ToDictionary(r => DateOnly.FromDateTime(r.Date), r => r.Count);
+
+        var weeklyAnnotations = annotationDict.Values.Sum();
+        var weeklyReviews = reviewDict.Values.Sum();
+
+        var todayAnnotations = annotationDict.GetValueOrDefault(todayDate, 0);
+        var todayReviews = reviewDict.GetValueOrDefault(todayDate, 0);
+
+        var weeklyPerformance = last7Days.Select(day =>
         {
-            Date = day,
-            Annotations = annotationsByDate.FirstOrDefault(a => DateOnly.FromDateTime(a.Date) == day)?.Count ?? 0,
-            Reviews = reviewsByDate.FirstOrDefault(r => DateOnly.FromDateTime(r.Date) == day)?.Count ?? 0,
-            TotalWorkload = totalWorkload
+            var annotationCount = annotationDict.GetValueOrDefault(day, 0);
+            var reviewCount = reviewDict.GetValueOrDefault(day, 0);
+
+            return new WeeklyPerformanceDto
+            {
+                Date = day,
+
+                Annotations = annotationCount,
+                AnnotationRate = weeklyAnnotations > 0
+                    ? (int)Math.Round(annotationCount * 100.0 / weeklyAnnotations)
+                    : 0,
+
+                Reviews = reviewCount,
+                ReviewRate = weeklyReviews > 0
+                    ? (int)Math.Round(reviewCount * 100.0 / weeklyReviews)
+                    : 0
+            };
         }).ToList();
 
         return new ManagerStatsDto
@@ -215,6 +292,12 @@ public class StatisticsService : IStatisticsService
             ActiveProjects = activeProjects,
             IncompletedProjects = incompletedProjects,
             CompletedProjects = completedProjects,
+
+            WeeklyAnnotations = weeklyAnnotations,
+            WeeklyReviews = weeklyReviews,
+            TodayAnnotations = todayAnnotations,
+            TodayReviews = todayReviews,
+
             WeeklyPerformance = weeklyPerformance
         };
     }
