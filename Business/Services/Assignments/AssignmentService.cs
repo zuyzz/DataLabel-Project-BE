@@ -163,6 +163,7 @@ public class AssignmentService : IAssignmentService
         {
             TaskId = task.TaskId,
             ProjectId = task.ProjectId,
+            Status = task.Status,
             Assignments = assignments.Select(a => new AssignmentResponse
             {
                 AssignmentId = a.AssignmentId,

@@ -108,7 +108,8 @@ public class LabelingTaskService : ILabelingTaskService
                 AssignedTo = item.AssignedTo,
                 AssignedBy = item.AssignedBy,
                 AssignedAt = item.AssignedAt,
-                DeadlineAt = item.DeadlineAt
+                DeadlineAt = item.DeadlineAt,
+                Status = task.Status
             });
         }
 
