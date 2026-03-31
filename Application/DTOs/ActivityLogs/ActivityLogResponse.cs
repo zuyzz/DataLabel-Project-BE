@@ -7,6 +7,7 @@ namespace DataLabelProject.Application.DTOs.ActivityLogs
         public string? ProjectName { get; init; }
         public Guid? UserId { get; init; }
         public string? Username { get; init; }
+        public string? UserRole { get; init; }
         public string EventType { get; init; } = null!;
         public string? TargetEntity { get; init; }
         public Guid? TargetId { get; init; }

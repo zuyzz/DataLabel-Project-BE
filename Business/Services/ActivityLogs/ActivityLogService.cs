@@ -21,8 +21,6 @@ public class ActivityLogService : IActivityLogService
     {
         var query = _context.ActivityLogs
             .AsNoTracking()
-            .Include(a => a.Project)
-            .Include(a => a.ActivityLogUser)
             .OrderByDescending(a => a.CreatedAt)
             .AsQueryable();
 
@@ -39,9 +37,10 @@ public class ActivityLogService : IActivityLogService
         {
             ActivityLogId = a.ActivityLogId,
             ProjectId = a.ProjectId,
-            ProjectName = a.Project.Name,
+            ProjectName = a.Project?.Name,
             UserId = a.UserId,
             Username = a.ActivityLogUser?.Username,
+            UserRole = a.ActivityLogUser?.UserRole?.RoleName,
             EventType = a.EventType,
             TargetEntity = a.TargetEntity,
             TargetId = a.TargetId,
