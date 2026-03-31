@@ -251,7 +251,22 @@ public class AnnotationService : IAnnotationService
 
         var boxes = BoxConversionHelper.FlattenBoxes(annotations);
         if (boxes.Count == 0)
-            throw new InvalidOperationException("No bounding boxes found in submitted annotations");
+        {
+            var emptyPayload = BuildConsensusPayload(
+                consensusBboxes: new List<ConsensusBboxDto>(),
+                agreementScore: 0
+            );
+
+            await _consensusRepository.CreateAsync(new Models.Consensus
+            {
+                ConsensusId = Guid.NewGuid(),
+                DatasetItemId = taskItem.DatasetItemId,
+                Payload = emptyPayload,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            return;
+        }
 
         var distinctAnnotators = annotations.Select(a => a.AnnotatorId).Distinct().Count();
         var clusters = _clusteringService.ClusterByIoU(boxes, DefaultIouThreshold);
