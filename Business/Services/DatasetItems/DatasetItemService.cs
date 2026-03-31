@@ -30,6 +30,19 @@ namespace DataLabelProject.Business.Services.DatasetItems
             _uploadStrategies = uploadStrategies;
         }
 
+        public async Task<PagedResponse<DatasetItemResponse>> GetDataItems(DatasetItemQueryParameters @params)
+        {
+            var (items, totalCount) = await _datasetItemRepository.GetAllAsync(@params);
+
+            return new PagedResponse<DatasetItemResponse> 
+            {
+                Items = items.Select(MapToResponse).ToList(),
+                TotalItems = totalCount,
+                Page = @params.Page,
+                PageSize = @params.PageSize
+            };
+        }
+
         public async Task<PagedResponse<DatasetItemResponse>> GetDataItemsByDatasetId(Guid datasetId, DatasetItemQueryParameters @params)
         {
             var (items, totalCount) = await _datasetItemRepository.GetAllByDatasetIdAsync(datasetId, @params);

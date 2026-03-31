@@ -5,6 +5,7 @@ namespace DataLabelProject.Data.Repositories.Abstractions;
 
 public interface IDatasetItemRepository
 {
+    Task<(IEnumerable<DatasetItem> Items, int TotalCount)> GetAllAsync(DatasetItemQueryParameters @params);
     Task<(IEnumerable<DatasetItem> Items, int TotalCount)> GetAllByDatasetIdAsync(Guid datasetId, DatasetItemQueryParameters @params);
     Task<IEnumerable<DatasetItem>> GetAllByDatasetIdAsync(Guid datasetId);
     Task<DatasetItem?> GetByIdAsync(Guid id);

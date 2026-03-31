@@ -14,6 +14,22 @@ public class DatasetItemRepository : IDatasetItemRepository
         _context = context;
     }
 
+    public async Task<(IEnumerable<DatasetItem> Items, int TotalCount)> GetAllAsync(DatasetItemQueryParameters @params)
+    {
+        var query = _context.DatasetItems
+            .AsNoTracking()
+            .OrderByDescending(i => i.CreatedAt);
+        
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .Skip(@params.Offset)
+            .Take(@params.PageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
+
     public async Task<(IEnumerable<DatasetItem> Items, int TotalCount)> GetAllByDatasetIdAsync(Guid datasetId, DatasetItemQueryParameters @params)
     {
         var query = _context.DatasetItems

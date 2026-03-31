@@ -62,9 +62,20 @@ public class DatasetsController : ControllerBase
     /// </summary>
     [HttpGet("{datasetId:guid}/items")]
     [Authorize(Roles = "admin,manager")]
-    public async Task<IActionResult> GetDatasetItems([FromRoute] Guid datasetId, [FromQuery] DatasetItemQueryParameters @params)
+    public async Task<IActionResult> GetDatasetItemsForDataset([FromRoute] Guid datasetId, [FromQuery] DatasetItemQueryParameters @params)
     {
         var result = await _itemService.GetDataItemsByDatasetId(datasetId, @params);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get all dataset items for a specific dataset.
+    /// </summary>
+    [HttpGet("items")]
+    [Authorize(Roles = "admin,manager")]
+    public async Task<IActionResult> GetDatasetItems([FromQuery] DatasetItemQueryParameters @params)
+    {
+        var result = await _itemService.GetDataItems(@params);
         return Ok(result);
     }
 
