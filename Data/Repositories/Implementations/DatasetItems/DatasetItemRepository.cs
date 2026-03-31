@@ -55,6 +55,15 @@ public class DatasetItemRepository : IDatasetItemRepository
             .ToListAsync();
     }
 
+    public async Task<HashSet<string>> GetExistingHashes(Guid datasetId, IEnumerable<string> hashes)
+    {
+        return (await _context.DatasetItems
+            .Where(d => d.DatasetId == datasetId && hashes.Contains(d.ContentHash))
+            .Select(d => d.ContentHash)
+            .ToListAsync())
+            .ToHashSet();
+    }
+
     public async Task<DatasetItem?> GetByIdAsync(Guid id)
     {
         return await _context.DatasetItems

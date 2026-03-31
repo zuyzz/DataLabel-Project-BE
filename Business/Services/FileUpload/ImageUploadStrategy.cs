@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Http;
 using DataLabelProject.Business.Services.FileUpload.Metadata;
+using DataLabelProject.Shared.Utils;
 
 namespace DataLabelProject.Business.Services.FileUpload;
 
@@ -26,15 +26,20 @@ public class ImageUploadStrategy : IFileUploadStrategy
         string storageDir)
     {
         using var stream = file.OpenReadStream();
+
+        var hash = Hashing.ComputeHash(stream);
+        stream.Position = 0;
+
         var contentType = file.ContentType ?? "application/octet-stream";
 
         var fileId = Guid.NewGuid();
         var storageKey = $"{storageDir}/{fileId}";
 
+        stream.Position = 0;
         var metadata = await _metadataExtractorFactory.ExtractMetadataAsync(stream, contentType);
         var uri = await _storage.CreateFileAsync(stream, storageKey, contentType);
 
-        var item = new FileItem(fileId, contentType, uri, metadata ?? "{}");
+        var item = new FileItem(fileId, contentType, uri, metadata ?? "{}", hash);
 
         return new[] { item };
     }

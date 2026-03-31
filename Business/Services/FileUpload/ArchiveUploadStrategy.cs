@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Http;
 using SharpCompress.Archives;
 using DataLabelProject.Business.Services.FileUpload.Metadata;
+using DataLabelProject.Shared.Utils;
 
 namespace DataLabelProject.Business.Services.FileUpload;
 
@@ -127,6 +127,11 @@ public class ArchiveUploadStrategy : IFileUploadStrategy
         string entryName,
         string storageKey)
     {
+        stream.Position = 0;
+
+        var hash = Hashing.ComputeHash(stream);
+        stream.Position = 0;
+
         var ext = Path.GetExtension(entryName).ToLowerInvariant();
         var contentType = MediaTypeConstants.GetContentTypeByExtension(ext)
             ?? "application/octet-stream";
@@ -134,10 +139,11 @@ public class ArchiveUploadStrategy : IFileUploadStrategy
         var fileId = Guid.NewGuid();
         storageKey = $"{storageKey}/{fileId}";
 
+        stream.Position = 0;
         var metadata = await _metadataExtractorFactory.ExtractMetadataAsync(stream, contentType);
         var uri = await _storage.CreateFileAsync(stream, storageKey, contentType);
 
-        return new FileItem(fileId, contentType, uri, metadata ?? "{}");
+        return new FileItem(fileId, contentType, uri, metadata ?? "{}", hash);
     }
 
     private static bool IsValidExtension(string ext)

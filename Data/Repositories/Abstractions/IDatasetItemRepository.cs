@@ -8,6 +8,7 @@ public interface IDatasetItemRepository
     Task<(IEnumerable<DatasetItem> Items, int TotalCount)> GetAllAsync(DatasetItemQueryParameters @params);
     Task<(IEnumerable<DatasetItem> Items, int TotalCount)> GetAllByDatasetIdAsync(Guid datasetId, DatasetItemQueryParameters @params);
     Task<IEnumerable<DatasetItem>> GetAllByDatasetIdAsync(Guid datasetId);
+    Task<HashSet<string>> GetExistingHashes(Guid datasetId, IEnumerable<string> hashes);
     Task<DatasetItem?> GetByIdAsync(Guid id);
     Task CreateAsync(DatasetItem item);
     Task CreateRangeAsync(IEnumerable<DatasetItem> items);

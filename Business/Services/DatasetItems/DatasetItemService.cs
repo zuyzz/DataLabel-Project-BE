@@ -79,13 +79,23 @@ namespace DataLabelProject.Business.Services.DatasetItems
 
             var uploaded = await fileUpload.ProcessAsync(request.File, storageKey);
 
-            var items = uploaded.Select(u => new DatasetItem
+            var hashes = uploaded.Select(u => u.Hash);
+            var existingHashes = await _datasetItemRepository.GetExistingHashes(datasetId, hashes);
+
+            var finalUploads = uploaded
+                .Where(u => !existingHashes.Contains(u.Hash))
+                .ToList();
+
+            if (finalUploads.Count == 0) return;
+
+            var items = finalUploads.Select(u => new DatasetItem
             {
                 DatasetItemId = u.FileId,
                 DatasetId = datasetId,
                 MediaType = u.ContentType,
                 StorageUri = u.StorageUri,
                 Metadata = u.Metadata,
+                ContentHash = u.Hash,
                 CreatedAt = DateTime.UtcNow
             });
 
