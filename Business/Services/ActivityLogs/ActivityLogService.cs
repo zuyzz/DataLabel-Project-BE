@@ -41,7 +41,7 @@ public class ActivityLogService : IActivityLogService
             ProjectId = a.ProjectId,
             ProjectName = a.Project.Name,
             UserId = a.UserId,
-            UserDisplayName = a.ActivityLogUser?.DisplayName,
+            Username = a.ActivityLogUser?.Username,
             EventType = a.EventType,
             TargetEntity = a.TargetEntity,
             TargetId = a.TargetId,
