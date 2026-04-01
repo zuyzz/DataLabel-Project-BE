@@ -9,5 +9,6 @@ namespace DataLabelProject.Application.DTOs.Datasets
         public Guid CreatedBy { get; set; }
         public bool IsActive { get; set; } 
         public int SampleCount { get; set; }
+        public long TotalSize { get; set; } 
     };
 }

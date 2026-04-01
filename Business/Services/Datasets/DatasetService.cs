@@ -9,6 +9,7 @@ using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Application.DTOs.Common;
 using Microsoft.EntityFrameworkCore;
 using DataLabelProject.Shared.Extensions;
+using System.Text.Json;
 
 namespace DataLabelProject.Business.Services.Datasets;
 
@@ -301,6 +302,22 @@ public class DatasetService : IDatasetService
 
     private DatasetResponse MapToResponse(Dataset dataset)
     {
+        long totalSize = dataset.DatasetItems?
+            .Sum(i =>
+            {
+                if (string.IsNullOrEmpty(i.Metadata)) return 0;
+
+                try
+                {
+                    var meta = JsonSerializer.Deserialize<ImageMetadata>(i.Metadata);
+                    return meta?.FileSize ?? 0;
+                }
+                catch
+                {
+                    return 0;
+                }
+            }) ?? 0;
+
         return new DatasetResponse
         {
             DatasetId = dataset.DatasetId,
@@ -309,7 +326,8 @@ public class DatasetService : IDatasetService
             CreatedAt = dataset.CreatedAt,
             CreatedBy = dataset.CreatedBy,
             IsActive = dataset.IsActive,
-            SampleCount = dataset.DatasetItems?.Count ?? 0
+            SampleCount = dataset.DatasetItems?.Count ?? 0,
+            TotalSize = totalSize
         };
     }
 }
