@@ -1,6 +1,7 @@
 using DataLabelProject.Application.DTOs.Categories;
 using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Labels;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Services.Users;
 using DataLabelProject.Business.Services.ActivityLogs;
@@ -134,6 +135,9 @@ public class LabelService : ILabelService
         await _labelRepository.CreateAsync(label);
         await _labelRepository.SaveChangesAsync();
 
+        // Log label creation
+        await _activityLog.LogAsync(null, _currentUserService.UserId, ActivityEvents.LabelCreated, ActivityTargets.Label, label.LabelId, new LabelCreatedDetails { LabelName = label.Name });
+
         var createdLabel = await _labelRepository.Query()
             .Where(l => l.LabelId == label.LabelId)
             .Include(l => l.LabelCategory)
@@ -215,7 +219,13 @@ public class LabelService : ILabelService
         await _projectLabelRepository.CreateAsync(projectLabel);
         await _projectLabelRepository.SaveChangesAsync();
 
-        await _activityLog.LogAsync(projectId, currentUserId, "LABEL_ATTACHED", "ProjectLabel", labelId, new { labelId });
+        await _activityLog.LogAsync(projectId, currentUserId, ActivityEvents.LabelAttached, ActivityTargets.ProjectLabel, labelId, new LabelAttachedDetails
+        {
+            LabelId = labelId,
+            LabelName = label?.Name ?? "Unknown",
+            ProjectId = projectId,
+            ProjectName = project?.Name ?? "Unknown"
+        });
     }
 
     public async Task RemoveLabelFromProject(Guid labelId, Guid projectId)
@@ -236,7 +246,17 @@ public class LabelService : ILabelService
         await _projectLabelRepository.DeleteAsync(projectLabel);
         await _projectLabelRepository.SaveChangesAsync();
 
-        await _activityLog.LogAsync(projectId, currentUserId, "LABEL_DETACHED", "ProjectLabel", labelId, new { labelId });
+        // Get label and project details for logging
+        var label = await _labelRepository.GetByIdAsync(labelId);
+        var project = await _projectRepository.GetByIdAsync(projectId);
+
+        await _activityLog.LogAsync(projectId, currentUserId, ActivityEvents.LabelDetached, ActivityTargets.ProjectLabel, labelId, new LabelDetachedDetails
+        {
+            LabelId = labelId,
+            LabelName = label?.Name ?? "Unknown",
+            ProjectId = projectId,
+            ProjectName = project?.Name ?? "Unknown"
+        });
     }
 
     private LabelResponse MapToResponse(Label label)

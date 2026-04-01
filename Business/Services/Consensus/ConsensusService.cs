@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Consensus;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Data;
@@ -55,8 +56,8 @@ public class ConsensusService : IConsensusService
 		if (taskItem.DatasetItem?.ItemDataset?.ProjectId is Guid projectId)
 		{
 			await _activityLog.LogAsync(
-				projectId, null, "CONSENSUS_CREATED", "Consensus",
-				consensus.ConsensusId, new { taskItemId = request.TaskItemId, datasetItemId });
+				projectId, null, ActivityEvents.ConsensusCreated, ActivityTargets.Consensus,
+				consensus.ConsensusId, new ConsensusCreatedDetails { DatasetItemId = datasetItemId });
 		}
 
 		return MapToDto(created);

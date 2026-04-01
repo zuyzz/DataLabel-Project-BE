@@ -11,16 +11,21 @@ namespace DataLabelProject.Business.Services.ActivityLogs;
 public class ActivityLogService : IActivityLogService
 {
     private readonly AppDbContext _context;
+    private readonly IActivityLogMessageBuilder _messageBuilder;
 
-    public ActivityLogService(AppDbContext context)
+    public ActivityLogService(AppDbContext context, IActivityLogMessageBuilder messageBuilder)
     {
         _context = context;
+        _messageBuilder = messageBuilder;
     }
 
     public async Task<PagedResponse<ActivityLogResponse>> GetActivityLogs(ActivityLogQueryParameters @params)
     {
         var query = _context.ActivityLogs
             .AsNoTracking()
+            .Include(a => a.Project)
+            .Include(a => a.ActivityLogUser)
+                .ThenInclude(u => u.UserRole)
             .OrderByDescending(a => a.CreatedAt)
             .AsQueryable();
 
@@ -45,17 +50,18 @@ public class ActivityLogService : IActivityLogService
             TargetEntity = a.TargetEntity,
             TargetId = a.TargetId,
             Details = a.Details,
+            Message = _messageBuilder.Build(a),
             CreatedAt = a.CreatedAt
         });
     }
 
-    public async Task LogAsync(
-        Guid projectId,
+    public async Task LogAsync<TDetails>(
+        Guid? projectId,
         Guid? userId,
         string eventType,
         string targetEntity,
         Guid? targetId,
-        object? details = null)
+        TDetails? details = default) where TDetails : class
     {
         var log = new ActivityLog
         {

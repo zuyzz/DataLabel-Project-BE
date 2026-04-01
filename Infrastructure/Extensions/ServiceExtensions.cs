@@ -98,6 +98,7 @@ public static class ServiceExtensions
         services.AddScoped<IExportStrategy, CocoExportStrategy>();
         services.AddScoped<IExportStrategy, YoloExportStrategy>();
         services.AddScoped<IStatisticsService, StatisticsService>();
+        services.AddScoped<IActivityLogMessageBuilder, ActivityLogMessageBuilder>();
         services.AddScoped<IActivityLogService, ActivityLogService>();
 
         // File upload strategies

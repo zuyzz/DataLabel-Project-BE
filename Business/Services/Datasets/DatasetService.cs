@@ -1,4 +1,5 @@
 using DataLabelProject.Application.DTOs.Datasets;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Data.Repositories.Abstractions;
 using DataLabelProject.Business.Services.FileUpload;
@@ -63,6 +64,9 @@ public class DatasetService : IDatasetService
 
         await _datasetRepository.CreateAsync(dataset);
         await _datasetRepository.SaveChangesAsync();
+
+        // Log dataset creation
+        await _activityLog.LogAsync(null, currentUserId, ActivityEvents.DatasetCreated, ActivityTargets.Dataset, dataset.DatasetId, new DatasetCreatedDetails { DatasetName = dataset.Name });
 
         return MapToResponse(dataset);
     }
@@ -246,7 +250,13 @@ public class DatasetService : IDatasetService
         await _datasetRepository.SaveChangesAsync();
         await _taskItemRepository.SaveChangesAsync();
 
-        await _activityLog.LogAsync(projectId, currentUserId, "DATASET_ATTACHED", "Dataset", datasetId, new { datasetId });
+        await _activityLog.LogAsync(projectId, currentUserId, ActivityEvents.DatasetAttached, ActivityTargets.Dataset, datasetId, new DatasetAttachedDetails
+        {
+            DatasetId = datasetId,
+            DatasetName = dataset?.Name ?? "Unknown",
+            ProjectId = projectId,
+            ProjectName = project?.Name ?? "Unknown"
+        });
     }
 
     public async Task RemoveDatasetFromProject(Guid datasetId, Guid projectId)
@@ -280,7 +290,13 @@ public class DatasetService : IDatasetService
 
         await _datasetRepository.SaveChangesAsync();
 
-        await _activityLog.LogAsync(projectId, currentUserId, "DATASET_DETACHED", "Dataset", datasetId, new { datasetId });
+        await _activityLog.LogAsync(projectId, currentUserId, ActivityEvents.DatasetDetached, ActivityTargets.Dataset, datasetId, new DatasetDetachedDetails
+        {
+            DatasetId = datasetId,
+            DatasetName = dataset.Name,
+            ProjectId = projectId,
+            ProjectName = project.Name
+        });
     }
 
     private DatasetResponse MapToResponse(Dataset dataset)

@@ -1,5 +1,6 @@
 using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Users;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Services.ActivityLogs;
 using DataLabelProject.Data.Repositories.Abstractions;
@@ -88,6 +89,9 @@ public class UserService : IUserService
 
         await _userRepository.CreateAsync(user);
         await _userRepository.SaveChangesAsync();
+
+        // Log user creation
+        await _activityLog.LogAsync(null, user.UserId, ActivityEvents.UserCreated, ActivityTargets.User, user.UserId, new UserCreatedDetails { Username = user.Username });
 
         var projectCount = 0;
 

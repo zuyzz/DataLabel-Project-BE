@@ -1,5 +1,6 @@
 using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Guidelines;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Services.Users;
 using DataLabelProject.Business.Services.ActivityLogs;
@@ -11,17 +12,20 @@ namespace DataLabelProject.Business.Services.Guidelines;
 public class GuidelineService : IGuidelineService
 {
     private readonly IGuidelineRepository _guidelineRepository;
+    private readonly IProjectRepository _projectRepository;
     private readonly IProjectMemberRepository _memberRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IActivityLogService _activityLog;
 
     public GuidelineService(
         IGuidelineRepository guidelineRepository,
+        IProjectRepository projectRepository,
         IProjectMemberRepository memberRepository,
         ICurrentUserService currentUserService,
         IActivityLogService activityLog)
     {
         _guidelineRepository = guidelineRepository;
+        _projectRepository = projectRepository;
         _memberRepository = memberRepository;
         _currentUserService = currentUserService;
         _activityLog = activityLog;
@@ -74,6 +78,17 @@ public class GuidelineService : IGuidelineService
         await _guidelineRepository.CreateAsync(guideline);
         await _guidelineRepository.SaveChangesAsync();
 
+        // Get project details for logging
+        var project = await _projectRepository.GetByIdAsync(request.ProjectId);
+
+        // Log guideline creation
+        await _activityLog.LogAsync(request.ProjectId, _currentUserService.UserId, ActivityEvents.GuidelineCreated, ActivityTargets.Guideline, guideline.GuidelineId, new GuidelineCreatedDetails
+        {
+            GuidelineContent = guideline.Content,
+            ProjectId = request.ProjectId,
+            ProjectName = project?.Name ?? "Unknown"
+        });
+
         return MapToResponse(guideline);
     }
 
@@ -88,7 +103,7 @@ public class GuidelineService : IGuidelineService
         await _guidelineRepository.UpdateAsync(guideline);
         await _guidelineRepository.SaveChangesAsync();
 
-        await _activityLog.LogAsync(guideline.ProjectId, _currentUserService.UserId, "GUIDELINE_UPDATED", "Guideline", guideline.GuidelineId, null);
+        await _activityLog.LogAsync<object>(guideline.ProjectId, _currentUserService.UserId, ActivityEvents.GuidelineUpdated, ActivityTargets.Guideline, guideline.GuidelineId, null);
 
         return MapToResponse(guideline);
     }

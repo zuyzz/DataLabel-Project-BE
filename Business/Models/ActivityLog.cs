@@ -7,7 +7,7 @@ public partial class ActivityLog
 {
     public Guid ActivityLogId { get; set; }
 
-    public Guid ProjectId { get; set; }
+    public Guid? ProjectId { get; set; }
 
     public Guid? UserId { get; set; }
 
@@ -21,7 +21,7 @@ public partial class ActivityLog
 
     public DateTime CreatedAt { get; set; }
 
-    public virtual Project Project { get; set; } = null!;
+    public virtual Project? Project { get; set; }
 
     public virtual User? ActivityLogUser { get; set; }
 }

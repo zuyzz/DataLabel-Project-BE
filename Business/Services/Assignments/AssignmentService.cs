@@ -1,4 +1,5 @@
 using DataLabelProject.Application.DTOs.Tasks;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.Users;
@@ -154,10 +155,15 @@ public class AssignmentService : IAssignmentService
         await _assignmentRepo.SaveChangesAsync();
         await _datasetRepo.SaveChangesAsync();
 
-        await _activityLog.LogAsync(request.ProjectId, assignedBy, "TASK_CREATED", "LabelingTask", task.TaskId, null);
-
+        var sampleCount = taskItems.Count;
         foreach (var a in assignments)
-            await _activityLog.LogAsync(request.ProjectId, assignedBy, "ASSIGNMENT_CREATED", "Assignment", a.AssignmentId, new { assignedTo = a.AssignedTo });
+        {
+            await _activityLog.LogAsync(request.ProjectId, assignedBy, ActivityEvents.AssignmentCreated, ActivityTargets.Assignment, a.AssignmentId, new AssignmentCreatedDetails
+            {
+                AssignedTo = a.AssignedTo,
+                SampleCount = sampleCount
+            });
+        }
 
         return new BulkTaskAssignmentResponse
         {

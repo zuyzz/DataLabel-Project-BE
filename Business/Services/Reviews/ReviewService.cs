@@ -3,6 +3,7 @@ using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Consensus;
 using DataLabelProject.Application.DTOs.Reviews;
 using DataLabelProject.Application.DTOs.Tasks;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.Users;
@@ -180,7 +181,11 @@ namespace DataLabelProject.Business.Services.Reviews
             await _reviewRepository.SaveChangesAsync();
             await _taskItemRepository.SaveChangesAsync();
 
-            await _activityLog.LogAsync(taskItem.ProjectId, reviewerId, "REVIEW_SUBMITTED", "Review", review.ReviewId, new { result = review.Result.ToString() });
+            await _activityLog.LogAsync(taskItem.ProjectId, reviewerId, ActivityEvents.ReviewSubmitted, ActivityTargets.Review, review.ReviewId, new ReviewSubmittedDetails
+            {
+                TaskItemId = taskItem.TaskItemId,
+                Result = review.Result.ToString()
+            });
 
             return MapToResponse(review);
         }

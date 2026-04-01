@@ -5,13 +5,13 @@ namespace DataLabelProject.Business.Services.ActivityLogs;
 
 public interface IActivityLogService
 {
-    Task LogAsync(
-        Guid projectId,
+    Task LogAsync<TDetails>(
+        Guid? projectId,
         Guid? userId,
         string eventType,
         string targetEntity,
         Guid? targetId,
-        object? details = null);
+        TDetails? details = default) where TDetails : class;
 
     Task<PagedResponse<ActivityLogResponse>> GetActivityLogs(ActivityLogQueryParameters @params);
 }

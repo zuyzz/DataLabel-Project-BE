@@ -2,6 +2,7 @@ using System.Text.Json;
 using DataLabelProject.Application.DTOs.Annotations;
 using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Consensus;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.Consensus;
@@ -154,7 +155,7 @@ public class AnnotationService : IAnnotationService
             await CheckConsensusAsync(taskItem);
             await _annotationRepository.SaveChangesAsync();
 
-            await _activityLog.LogAsync(taskItem.ProjectId, currentUserId, "ANNOTATION_SUBMITTED", "Annotation", annotation.AnnotationId, new { taskItemId = taskItem.TaskItemId });
+            await _activityLog.LogAsync(taskItem.ProjectId, currentUserId, ActivityEvents.AnnotationSubmitted, ActivityTargets.Annotation, annotation.AnnotationId, new AnnotationSubmittedDetails { TaskItemId = taskItem.TaskItemId });
 
             responses.Add(MapToResponse(annotation));
         }
@@ -186,7 +187,7 @@ public class AnnotationService : IAnnotationService
         await CheckConsensusAsync(taskItem);
         await _annotationRepository.SaveChangesAsync();
 
-        await _activityLog.LogAsync(taskItem.ProjectId, currentUserId, "ANNOTATION_UPDATED", "Annotation", annotation.AnnotationId, null);
+        // await _activityLog.LogAsync<object>(taskItem.ProjectId, currentUserId, ActivityEvents.AnnotationUpdated, ActivityTargets.Annotation, annotation.AnnotationId, null);
 
         return MapToResponse(annotation);
     }
