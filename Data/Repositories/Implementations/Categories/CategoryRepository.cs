@@ -40,6 +40,12 @@ public class CategoryRepository : ICategoryRepository
             .FirstOrDefaultAsync(c => c.CategoryId == id);
     }
 
+    public async Task<Category?> GetByNameAsync(string name)
+    {
+        return await _context.Categories
+            .FirstOrDefaultAsync(c => EF.Functions.ILike(c.Name, $"%{name.Trim()}%"));
+    }
+
     public async Task CreateAsync(Category category)
     {
         await _context.Categories.AddAsync(category);

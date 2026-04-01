@@ -7,6 +7,7 @@ public interface ICategoryRepository
 {
     Task<(IEnumerable<Category> Items, int TotalCount)> GetAllAsync(CategoryQueryParameters @params);
     Task<Category?> GetByIdAsync(Guid id);
+    Task<Category?> GetByNameAsync(string name);
     Task CreateAsync(Category category);
     Task UpdateAsync(Category category);
     Task SaveChangesAsync();

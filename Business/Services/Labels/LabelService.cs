@@ -169,11 +169,6 @@ public class LabelService : ILabelService
             label.Name = name;
         }
 
-        if (request.IsActive.HasValue)
-        {
-            label.IsActive = request.IsActive.Value;
-        }
-
         await _labelRepository.UpdateAsync(label);
         await _labelRepository.SaveChangesAsync();
 
@@ -183,6 +178,17 @@ public class LabelService : ILabelService
             .FirstAsync();
 
         return MapToResponse(updatedLabel);
+    }
+
+    public async Task DeactivateLabel(Guid id)
+    {
+        var label = await _labelRepository.GetByIdAsync(id) 
+            ?? throw new KeyNotFoundException("Label not found");
+
+        label.IsActive = false;
+
+        await _labelRepository.UpdateAsync(label);
+        await _labelRepository.SaveChangesAsync();
     }
 
     public async Task AddLabelToProject(Guid labelId, Guid projectId)

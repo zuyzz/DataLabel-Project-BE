@@ -44,6 +44,15 @@ public class LabelsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "admin,manager")]
+    public async Task<IActionResult> DeleteLabel(
+        Guid id)
+    {
+        await _labelService.DeactivateLabel(id);
+        return NoContent();
+    }
+
     [HttpPost("add/{projectId}")]
     [Authorize(Roles = "manager")]
     public async Task<IActionResult> AddLabel(

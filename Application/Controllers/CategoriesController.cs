@@ -80,4 +80,12 @@ public class CategoriesController : ControllerBase
         if (result == null) return NotFound();
         return Ok(result);
     }
+
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "admin,manager")]
+    public async Task<IActionResult> Deactivate(Guid id)
+    {
+        await _categoryService.DeactivateCategory(id);
+        return NoContent();
+    }
 }

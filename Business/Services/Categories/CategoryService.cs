@@ -40,6 +40,10 @@ namespace DataLabelProject.Business.Services.Categories
 
         public async Task<CategoryResponse> CreateCategory(CreateCategoryRequest request)
         {
+            var existingCategory = await _categoryRepository.GetByNameAsync(request.Name);
+            if (existingCategory != null)
+                throw new InvalidOperationException("Category with the same name already exists");
+
             var category = new Category
             {
                 CategoryId = Guid.NewGuid(),
@@ -67,13 +71,21 @@ namespace DataLabelProject.Business.Services.Categories
             if (!string.IsNullOrWhiteSpace(request.Description))
                 category.Description = request.Description;
 
-            if (request.IsActive.HasValue)
-                category.IsActive = request.IsActive.Value;
-
             await _categoryRepository.UpdateAsync(category);
             await _categoryRepository.SaveChangesAsync();
 
             return MapToResponse(category);
+        }
+
+        public async Task DeactivateCategory(Guid id)
+        {
+            var category = await _categoryRepository.GetByIdAsync(id)
+                ?? throw new KeyNotFoundException("Category not found");
+
+            category.IsActive = false;
+
+            await _categoryRepository.UpdateAsync(category);
+            await _categoryRepository.SaveChangesAsync();
         }
 
         private CategoryResponse MapToResponse(Category category)
