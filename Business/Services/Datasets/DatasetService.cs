@@ -325,6 +325,7 @@ public class DatasetService : IDatasetService
             Description = dataset.Description,
             CreatedAt = dataset.CreatedAt,
             CreatedBy = dataset.CreatedBy,
+            AttachedTo = dataset.ProjectId,
             IsActive = dataset.IsActive,
             SampleCount = dataset.DatasetItems?.Count ?? 0,
             TotalSize = totalSize
