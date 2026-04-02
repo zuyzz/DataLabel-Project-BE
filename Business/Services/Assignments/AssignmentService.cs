@@ -140,8 +140,8 @@ public class AssignmentService : IAssignmentService
             AssignedTo = a.AssignedTo,
             AssignedBy = assignedBy,
             AssignedAt = DateTime.UtcNow,
-            StartedAt = a.StartedAt,
-            DeadlineAt = a.DeadlineAt
+            StartedAt = DateTime.SpecifyKind(a.StartedAt, DateTimeKind.Utc),
+            DeadlineAt = DateTime.SpecifyKind(a.DeadlineAt, DateTimeKind.Utc)
         }).ToList();
 
         await _assignmentRepo.AddRangeAsync(assignments);
