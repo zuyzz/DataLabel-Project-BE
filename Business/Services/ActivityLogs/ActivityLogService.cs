@@ -25,7 +25,7 @@ public class ActivityLogService : IActivityLogService
             .AsNoTracking()
             .Include(a => a.Project)
             .Include(a => a.ActivityLogUser)
-                .ThenInclude(u => u.UserRole)
+                .ThenInclude(u => u!.UserRole)
             .OrderByDescending(a => a.CreatedAt)
             .AsQueryable();
 

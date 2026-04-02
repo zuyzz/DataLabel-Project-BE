@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Application.DTOs.Users;
 using DataLabelProject.Business.Services.ActivityLogs;
+using DataLabelProject.Business.Services.Users;
 
 namespace DataLabelProject.Business.Services.Projects;
 
@@ -18,19 +19,22 @@ public class ProjectMemberService : IProjectMemberService
     private readonly IUserRepository _userRepository;
     private readonly IAssignmentRepository _assignmentRepository;
     private readonly IActivityLogService _activityLog;
+    private readonly ICurrentUserService _currentUserService;
 
     public ProjectMemberService(
         IProjectRepository projectRepository,
         IProjectMemberRepository projectMemberRepository,
         IUserRepository userRepository,
         IAssignmentRepository assignmentRepository,
-        IActivityLogService activityLog)
+        IActivityLogService activityLog,
+        ICurrentUserService currentUserService)
     {
         _projectRepository = projectRepository;
         _projectMemberRepository = projectMemberRepository;
         _userRepository = userRepository;
         _assignmentRepository = assignmentRepository;
         _activityLog = activityLog;
+        _currentUserService = currentUserService;
     }
 
     public async Task AddUserToProject(Guid userId, Guid projectId)
@@ -53,7 +57,9 @@ public class ProjectMemberService : IProjectMemberService
         var user = await _userRepository.GetByIdAsync(userId);
         var project = await _projectRepository.GetByIdAsync(projectId);
 
-        await _activityLog.LogAsync(projectId, null, ActivityEvents.MemberAdded, ActivityTargets.ProjectMember, userId, new MemberAddedDetails
+        var currentUserId = _currentUserService.UserId!.Value;
+
+        await _activityLog.LogAsync(projectId, currentUserId, ActivityEvents.MemberAdded, ActivityTargets.ProjectMember, userId, new MemberAddedDetails
         {
             MemberId = userId,
             MemberName = user?.Username ?? "Unknown",
@@ -75,7 +81,9 @@ public class ProjectMemberService : IProjectMemberService
         var user = await _userRepository.GetByIdAsync(userId);
         var project = await _projectRepository.GetByIdAsync(projectId);
 
-        await _activityLog.LogAsync(projectId, null, ActivityEvents.MemberRemoved, ActivityTargets.ProjectMember, userId, new MemberRemovedDetails
+        var currentUserId = _currentUserService.UserId!.Value;
+
+        await _activityLog.LogAsync(projectId, currentUserId, ActivityEvents.MemberRemoved, ActivityTargets.ProjectMember, userId, new MemberRemovedDetails
         {
             MemberId = userId,
             MemberName = user?.Username ?? "Unknown",
