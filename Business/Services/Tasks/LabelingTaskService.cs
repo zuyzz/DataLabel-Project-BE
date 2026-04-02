@@ -225,7 +225,6 @@ public class LabelingTaskService : ILabelingTaskService
             TaskItemId = taskItem.TaskItemId,
             DatasetItemId = taskItem.DatasetItemId,
             TaskId = taskItem.TaskId,
-            RevisionCount = taskItem.RevisionCount,
             Status = taskItem.Status
         };
     }

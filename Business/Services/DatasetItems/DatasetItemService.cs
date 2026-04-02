@@ -109,7 +109,6 @@ namespace DataLabelProject.Business.Services.DatasetItems
                     TaskId = null,
                     ProjectId = dataset.ProjectId.Value,
                     DatasetItemId = i.DatasetItemId,
-                    RevisionCount = 0,
                     Status = Models.Enums.LabelingTaskItemStatus.Unassigned
                 });
 

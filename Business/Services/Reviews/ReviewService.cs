@@ -145,8 +145,6 @@ namespace DataLabelProject.Business.Services.Reviews
 
             switch (taskItem.Status)
             {
-                case LabelingTaskItemStatus.Locked:
-                    throw new InvalidOperationException("This item have been locked");
                 case LabelingTaskItemStatus.Completed:
                 case LabelingTaskItemStatus.Incompleted:
                     throw new InvalidOperationException("This item have already been reviewed");
@@ -215,7 +213,6 @@ namespace DataLabelProject.Business.Services.Reviews
             {
                 TaskItemId = tItem.TaskItemId,
                 DatasetItemId = tItem.DatasetItemId,
-                RevisionCount = tItem.RevisionCount,
                 Status = tItem.Status,
                 Reviews = tItem.Reviews
                     .Select(MapToResponse)

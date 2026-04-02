@@ -242,7 +242,6 @@ public class DatasetService : IDatasetService
             TaskId = null,
             ProjectId = projectId,
             DatasetItemId = i.DatasetItemId,
-            RevisionCount = 0,
             Status = Models.Enums.LabelingTaskItemStatus.Unassigned
         });
 

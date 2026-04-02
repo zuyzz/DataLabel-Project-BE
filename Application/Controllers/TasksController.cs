@@ -117,7 +117,6 @@ public class TasksController : ControllerBase
                     TaskItemId = i.TaskItemId,
                     DatasetItemId = i.DatasetItemId,
                     TaskId = i.TaskId,
-                    RevisionCount = i.RevisionCount,
                     Status = i.Status
                 }).ToList() ?? new List<TaskItemResponse>()
             };
@@ -154,7 +153,6 @@ public class TasksController : ControllerBase
                     TaskItemId = i.TaskItemId,
                     DatasetItemId = i.DatasetItemId,
                     TaskId = i.TaskId,
-                    RevisionCount = i.RevisionCount,
                     Status = i.Status
                 }).ToList() ?? new List<TaskItemResponse>()
             };
@@ -184,7 +182,6 @@ public class TasksController : ControllerBase
                 TaskItemId = i.TaskItemId,
                 DatasetItemId = i.DatasetItemId,
                 TaskId = i.TaskId,
-                RevisionCount = i.RevisionCount,
                 Status = i.Status
             }).ToList();
 

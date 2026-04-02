@@ -100,7 +100,6 @@ public class AnnotationService : IAnnotationService
                 TaskItemId = ti.TaskItemId,
                 DatasetItemId = ti.DatasetItemId,
                 Status = ti.Status.ToString(),
-                RevisionCount = ti.RevisionCount,
                 Annotations = annotations.Select(MapToResponse).ToList()
             };
         }).ToList();
@@ -222,9 +221,6 @@ public class AnnotationService : IAnnotationService
     {
         if (taskItem.Status == LabelingTaskItemStatus.Unassigned)
             throw new InvalidOperationException("Task item is not assigned");
-
-        if (taskItem.Status == LabelingTaskItemStatus.Locked)
-            throw new InvalidOperationException("Task item is locked");
     }
 
     // 3. Consensus check after annotation submission
@@ -281,10 +277,6 @@ public class AnnotationService : IAnnotationService
 
             await _annotationRepository.UpdateRangeAsync(annotations);
             await _annotationRepository.SaveChangesAsync();
-
-            taskItem.RevisionCount++;
-            if (taskItem.RevisionCount >= 3)
-                taskItem.Status = LabelingTaskItemStatus.Locked;
 
             return;
         }

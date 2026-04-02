@@ -18,6 +18,5 @@ public class TaskItemAnnotationsResponse
     public Guid TaskItemId { get; set; }
     public Guid DatasetItemId { get; set; }
     public string Status { get; set; } = string.Empty;
-    public int RevisionCount { get; set; }
     public List<AnnotationResponse> Annotations { get; set; } = new();
 }

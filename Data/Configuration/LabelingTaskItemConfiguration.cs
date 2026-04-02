@@ -16,7 +16,6 @@ public class LabelingTaskItemConfiguration : IEntityTypeConfiguration<LabelingTa
         entity.Property(e => e.TaskId).HasColumnName("taskId");
         entity.Property(e => e.ProjectId).HasColumnName("projectId");
         entity.Property(e => e.DatasetItemId).HasColumnName("datasetItemId");
-        entity.Property(e => e.RevisionCount).HasColumnName("revisionCount");
         entity.Property(e => e.Status).HasColumnName("status");
 
         entity.HasOne(d => d.Task).WithMany(p => p.TaskItems)
