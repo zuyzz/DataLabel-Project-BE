@@ -2,6 +2,7 @@ using System.Text.Json;
 using DataLabelProject.Application.DTOs.Annotations;
 using DataLabelProject.Application.DTOs.Common;
 using DataLabelProject.Application.DTOs.Consensus;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.Consensus;
@@ -99,7 +100,6 @@ public class AnnotationService : IAnnotationService
                 TaskItemId = ti.TaskItemId,
                 DatasetItemId = ti.DatasetItemId,
                 Status = ti.Status.ToString(),
-                RevisionCount = ti.RevisionCount,
                 Annotations = annotations.Select(MapToResponse).ToList()
             };
         }).ToList();
@@ -154,7 +154,7 @@ public class AnnotationService : IAnnotationService
             await CheckConsensusAsync(taskItem);
             await _annotationRepository.SaveChangesAsync();
 
-            await _activityLog.LogAsync(taskItem.ProjectId, currentUserId, "ANNOTATION_SUBMITTED", "Annotation", annotation.AnnotationId, new { taskItemId = taskItem.TaskItemId });
+            await _activityLog.LogAsync(taskItem.ProjectId, currentUserId, ActivityEvents.AnnotationSubmitted, ActivityTargets.Annotation, annotation.AnnotationId, new AnnotationSubmittedDetails { TaskItemId = taskItem.TaskItemId });
 
             responses.Add(MapToResponse(annotation));
         }
@@ -186,7 +186,7 @@ public class AnnotationService : IAnnotationService
         await CheckConsensusAsync(taskItem);
         await _annotationRepository.SaveChangesAsync();
 
-        await _activityLog.LogAsync(taskItem.ProjectId, currentUserId, "ANNOTATION_UPDATED", "Annotation", annotation.AnnotationId, null);
+        // await _activityLog.LogAsync<object>(taskItem.ProjectId, currentUserId, ActivityEvents.AnnotationUpdated, ActivityTargets.Annotation, annotation.AnnotationId, null);
 
         return MapToResponse(annotation);
     }
@@ -221,9 +221,6 @@ public class AnnotationService : IAnnotationService
     {
         if (taskItem.Status == LabelingTaskItemStatus.Unassigned)
             throw new InvalidOperationException("Task item is not assigned");
-
-        if (taskItem.Status == LabelingTaskItemStatus.Locked)
-            throw new InvalidOperationException("Task item is locked");
     }
 
     // 3. Consensus check after annotation submission
@@ -251,7 +248,22 @@ public class AnnotationService : IAnnotationService
 
         var boxes = BoxConversionHelper.FlattenBoxes(annotations);
         if (boxes.Count == 0)
-            throw new InvalidOperationException("No bounding boxes found in submitted annotations");
+        {
+            var emptyPayload = BuildConsensusPayload(
+                consensusBboxes: new List<ConsensusBboxDto>(),
+                agreementScore: 0
+            );
+
+            await _consensusRepository.CreateAsync(new Models.Consensus
+            {
+                ConsensusId = Guid.NewGuid(),
+                DatasetItemId = taskItem.DatasetItemId,
+                Payload = emptyPayload,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            return;
+        }
 
         var distinctAnnotators = annotations.Select(a => a.AnnotatorId).Distinct().Count();
         var clusters = _clusteringService.ClusterByIoU(boxes, DefaultIouThreshold);
@@ -265,10 +277,6 @@ public class AnnotationService : IAnnotationService
 
             await _annotationRepository.UpdateRangeAsync(annotations);
             await _annotationRepository.SaveChangesAsync();
-
-            taskItem.RevisionCount++;
-            if (taskItem.RevisionCount >= 3)
-                taskItem.Status = LabelingTaskItemStatus.Locked;
 
             return;
         }

@@ -23,11 +23,11 @@ public class ImageMetadataExtractor : IMetadataExtractor
     {
         try
         {
-            long? sizeBytes = null;
+            long? fileSize = null;
 
             if (stream.CanSeek)
             {
-                sizeBytes = stream.Length;
+                fileSize = stream.Length;
                 stream.Position = 0;
             }
 
@@ -35,7 +35,7 @@ public class ImageMetadataExtractor : IMetadataExtractor
             var (width, height) = ExtractDimensions(directories);
 
             if (width > 0 && height > 0)
-                return JsonSerializer.Serialize(new { width, height, sizeBytes });
+                return JsonSerializer.Serialize(new { width, height, fileSize });
         }
         catch
         {

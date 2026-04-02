@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace DataLabelProject.Business.Services.FileUpload;
 
-public record FileItem(Guid FileId, string ContentType, string StorageUri, string Metadata);
+public record FileItem(Guid FileId, string ContentType, string StorageUri, string Metadata, string Hash);
 
 public interface IFileUploadStrategy
 {

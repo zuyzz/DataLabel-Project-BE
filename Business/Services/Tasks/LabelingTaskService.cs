@@ -108,7 +108,8 @@ public class LabelingTaskService : ILabelingTaskService
                 AssignedTo = item.AssignedTo,
                 AssignedBy = item.AssignedBy,
                 AssignedAt = item.AssignedAt,
-                DeadlineAt = item.DeadlineAt
+                DeadlineAt = item.DeadlineAt,
+                Status = task.Status
             });
         }
 
@@ -224,7 +225,6 @@ public class LabelingTaskService : ILabelingTaskService
             TaskItemId = taskItem.TaskItemId,
             DatasetItemId = taskItem.DatasetItemId,
             TaskId = taskItem.TaskId,
-            RevisionCount = taskItem.RevisionCount,
             Status = taskItem.Status
         };
     }

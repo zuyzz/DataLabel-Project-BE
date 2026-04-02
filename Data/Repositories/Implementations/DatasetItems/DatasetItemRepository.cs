@@ -14,6 +14,22 @@ public class DatasetItemRepository : IDatasetItemRepository
         _context = context;
     }
 
+    public async Task<(IEnumerable<DatasetItem> Items, int TotalCount)> GetAllAsync(DatasetItemQueryParameters @params)
+    {
+        var query = _context.DatasetItems
+            .AsNoTracking()
+            .OrderByDescending(i => i.CreatedAt);
+        
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .Skip(@params.Offset)
+            .Take(@params.PageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
+
     public async Task<(IEnumerable<DatasetItem> Items, int TotalCount)> GetAllByDatasetIdAsync(Guid datasetId, DatasetItemQueryParameters @params)
     {
         var query = _context.DatasetItems
@@ -37,6 +53,15 @@ public class DatasetItemRepository : IDatasetItemRepository
             .Where(i => i.DatasetId == datasetId)
             .OrderByDescending(i => i.CreatedAt)
             .ToListAsync();
+    }
+
+    public async Task<HashSet<string>> GetExistingHashes(Guid datasetId, IEnumerable<string> hashes)
+    {
+        return (await _context.DatasetItems
+            .Where(d => d.DatasetId == datasetId && hashes.Contains(d.ContentHash))
+            .Select(d => d.ContentHash)
+            .ToListAsync())
+            .ToHashSet();
     }
 
     public async Task<DatasetItem?> GetByIdAsync(Guid id)

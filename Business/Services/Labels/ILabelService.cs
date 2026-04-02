@@ -11,6 +11,7 @@ public interface ILabelService
     Task<LabelResponse?> GetLabelById(Guid id);
     Task<LabelResponse> CreateLabel(CreateLabelRequest request);
     Task<LabelResponse?> UpdateLabel(Guid id, UpdateLabelRequest request);
+    Task DeactivateLabel(Guid id);
     Task AddLabelToProject(Guid labelId, Guid projectId);
     Task RemoveLabelFromProject(Guid labelId, Guid projectId);
 }

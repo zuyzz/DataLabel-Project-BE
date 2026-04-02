@@ -63,7 +63,7 @@ public class JwtTokenService : IJwtTokenService
     public int GetAccessTokenExpiryMinutes()
     {
         // Default to 15 minutes as per document
-        return int.Parse(_configuration["Jwt:AccessTokenExpiryMinutes"] ?? "15");
+        return int.Parse(_configuration["Jwt:AccessTokenExpiryMinutes"] ?? "60");
     }
 
     public int GetRefreshTokenExpiryDays()

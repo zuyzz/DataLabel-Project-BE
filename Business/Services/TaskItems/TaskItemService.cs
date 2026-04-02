@@ -93,7 +93,6 @@ public class TaskItemService : ITaskItemService
                     MediaType = item.DatasetItem.MediaType,
                     CreatedAt = item.DatasetItem.CreatedAt
                 },
-                RevisionCount = item.RevisionCount,
                 Status = item.Status.ToString()
             });
         }

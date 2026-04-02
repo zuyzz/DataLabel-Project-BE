@@ -7,7 +7,6 @@ public class TaskItemResponse
     public Guid TaskItemId { get; set; }
     public Guid DatasetItemId { get; set; }
     public Guid? TaskId { get; set; }
-    public int RevisionCount { get; set; }
     public LabelingTaskItemStatus Status { get; set; }
 }
 

@@ -1,5 +1,6 @@
 using DataLabelProject.Application.DTOs.Projects;
 using DataLabelProject.Application.DTOs.Common;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Data.Repositories.Abstractions;
 using DataLabelProject.Shared.Extensions;
@@ -7,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Application.DTOs.Users;
 using DataLabelProject.Business.Services.ActivityLogs;
+using DataLabelProject.Business.Services.Users;
 
 namespace DataLabelProject.Business.Services.Projects;
 
@@ -14,19 +16,25 @@ public class ProjectMemberService : IProjectMemberService
 {
     private readonly IProjectRepository _projectRepository;
     private readonly IProjectMemberRepository _projectMemberRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IAssignmentRepository _assignmentRepository;
     private readonly IActivityLogService _activityLog;
+    private readonly ICurrentUserService _currentUserService;
 
     public ProjectMemberService(
         IProjectRepository projectRepository,
         IProjectMemberRepository projectMemberRepository,
+        IUserRepository userRepository,
         IAssignmentRepository assignmentRepository,
-        IActivityLogService activityLog)
+        IActivityLogService activityLog,
+        ICurrentUserService currentUserService)
     {
         _projectRepository = projectRepository;
         _projectMemberRepository = projectMemberRepository;
+        _userRepository = userRepository;
         _assignmentRepository = assignmentRepository;
         _activityLog = activityLog;
+        _currentUserService = currentUserService;
     }
 
     public async Task AddUserToProject(Guid userId, Guid projectId)
@@ -45,7 +53,19 @@ public class ProjectMemberService : IProjectMemberService
         await _projectMemberRepository.CreateAsync(member);
         await _projectMemberRepository.SaveChangesAsync();
 
-        await _activityLog.LogAsync(projectId, null, "MEMBER_ADDED", "ProjectMember", userId, new { memberId = userId });
+        // Get user and project details for logging
+        var user = await _userRepository.GetByIdAsync(userId);
+        var project = await _projectRepository.GetByIdAsync(projectId);
+
+        var currentUserId = _currentUserService.UserId!.Value;
+
+        await _activityLog.LogAsync(projectId, currentUserId, ActivityEvents.MemberAdded, ActivityTargets.ProjectMember, userId, new MemberAddedDetails
+        {
+            MemberId = userId,
+            MemberName = user?.Username ?? "Unknown",
+            ProjectId = projectId,
+            ProjectName = project?.Name ?? "Unknown"
+        });
     }
 
     public async Task RemoveUserFromProject(Guid userId, Guid projectId)
@@ -57,7 +77,19 @@ public class ProjectMemberService : IProjectMemberService
         await _projectMemberRepository.DeleteAsync(member);
         await _projectMemberRepository.SaveChangesAsync();
 
-        await _activityLog.LogAsync(projectId, null, "MEMBER_REMOVED", "ProjectMember", userId, new { memberId = userId });
+        // Get user and project details for logging
+        var user = await _userRepository.GetByIdAsync(userId);
+        var project = await _projectRepository.GetByIdAsync(projectId);
+
+        var currentUserId = _currentUserService.UserId!.Value;
+
+        await _activityLog.LogAsync(projectId, currentUserId, ActivityEvents.MemberRemoved, ActivityTargets.ProjectMember, userId, new MemberRemovedDetails
+        {
+            MemberId = userId,
+            MemberName = user?.Username ?? "Unknown",
+            ProjectId = projectId,
+            ProjectName = project?.Name ?? "Unknown"
+        });
     }
 
     public async Task<PagedResponse<UserResponse>> GetUserFromProject(Guid projectId, ProjectMemberQueryParameters @params)

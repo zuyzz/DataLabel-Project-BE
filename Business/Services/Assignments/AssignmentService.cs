@@ -1,4 +1,5 @@
 using DataLabelProject.Application.DTOs.Tasks;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Business.Models.Enums;
 using DataLabelProject.Business.Services.Users;
@@ -139,8 +140,8 @@ public class AssignmentService : IAssignmentService
             AssignedTo = a.AssignedTo,
             AssignedBy = assignedBy,
             AssignedAt = DateTime.UtcNow,
-            StartedAt = a.StartedAt,
-            DeadlineAt = a.DeadlineAt
+            StartedAt = DateTime.SpecifyKind(a.StartedAt, DateTimeKind.Utc),
+            DeadlineAt = DateTime.SpecifyKind(a.DeadlineAt, DateTimeKind.Utc)
         }).ToList();
 
         await _assignmentRepo.AddRangeAsync(assignments);
@@ -154,15 +155,21 @@ public class AssignmentService : IAssignmentService
         await _assignmentRepo.SaveChangesAsync();
         await _datasetRepo.SaveChangesAsync();
 
-        await _activityLog.LogAsync(request.ProjectId, assignedBy, "TASK_CREATED", "LabelingTask", task.TaskId, null);
-
+        var sampleCount = taskItems.Count;
         foreach (var a in assignments)
-            await _activityLog.LogAsync(request.ProjectId, assignedBy, "ASSIGNMENT_CREATED", "Assignment", a.AssignmentId, new { assignedTo = a.AssignedTo });
+        {
+            await _activityLog.LogAsync(request.ProjectId, assignedBy, ActivityEvents.AssignmentCreated, ActivityTargets.Assignment, a.AssignmentId, new AssignmentCreatedDetails
+            {
+                AssignedTo = a.AssignedTo,
+                SampleCount = sampleCount
+            });
+        }
 
         return new BulkTaskAssignmentResponse
         {
             TaskId = task.TaskId,
             ProjectId = task.ProjectId,
+            Status = task.Status,
             Assignments = assignments.Select(a => new AssignmentResponse
             {
                 AssignmentId = a.AssignmentId,

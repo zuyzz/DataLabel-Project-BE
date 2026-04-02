@@ -15,6 +15,8 @@ public partial class DatasetItem
 
     public string Metadata { get; set; } = null!;
 
+    public string ContentHash { get; set; } = null!;
+
     public DateTime CreatedAt { get; set; }
 
     public virtual Dataset ItemDataset { get; set; } = null!;

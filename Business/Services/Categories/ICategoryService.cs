@@ -9,5 +9,6 @@ namespace DataLabelProject.Business.Services.Categories
         Task<CategoryResponse?> GetCategoryById(Guid id);
         Task<CategoryResponse> CreateCategory(CreateCategoryRequest request);
         Task<CategoryResponse?> UpdateCategory(Guid id, UpdateCategoryRequest request);
+        Task DeactivateCategory(Guid id);
     }
 }

@@ -1,5 +1,6 @@
 using DataLabelProject.Application.DTOs.Projects;
 using DataLabelProject.Application.DTOs.Common;
+using DataLabelProject.Business.Services.ActivityLogs.Constant;
 using DataLabelProject.Business.Models;
 using DataLabelProject.Data.Repositories.Abstractions;
 using DataLabelProject.Business.Services.Users;
@@ -150,7 +151,7 @@ public class ProjectService : IProjectService
 
         await _eventDispatcher.DispatchAsync(new ProjectCreatedEvent(project.ProjectId));
 
-        await _activityLog.LogAsync(project.ProjectId, currentUserId, "PROJECT_CREATED", "Project", project.ProjectId, new { name = project.Name });
+        await _activityLog.LogAsync(project.ProjectId, currentUserId, ActivityEvents.ProjectCreated, ActivityTargets.Project, project.ProjectId, new ProjectCreatedDetails { ProjectName = project.Name });
 
         project = await _projectRepository.GetByIdAsync(project.ProjectId);
 
@@ -186,9 +187,9 @@ public class ProjectService : IProjectService
         await _projectRepository.SaveChangesAsync();
 
         if (request.IsActive.HasValue && !request.IsActive.Value)
-            await _activityLog.LogAsync(project.ProjectId, currentUserId, "PROJECT_DEACTIVATED", "Project", project.ProjectId, null);
+            await _activityLog.LogAsync<object>(project.ProjectId, currentUserId, ActivityEvents.ProjectDeactivated, ActivityTargets.Project, project.ProjectId, null);
         else
-            await _activityLog.LogAsync(project.ProjectId, currentUserId, "PROJECT_UPDATED", "Project", project.ProjectId, null);
+            await _activityLog.LogAsync<object>(project.ProjectId, currentUserId, ActivityEvents.ProjectUpdated, ActivityTargets.Project, project.ProjectId, null);
 
         return MapToResponse(project);
     }

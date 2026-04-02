@@ -30,6 +30,19 @@ namespace DataLabelProject.Business.Services.DatasetItems
             _uploadStrategies = uploadStrategies;
         }
 
+        public async Task<PagedResponse<DatasetItemResponse>> GetDataItems(DatasetItemQueryParameters @params)
+        {
+            var (items, totalCount) = await _datasetItemRepository.GetAllAsync(@params);
+
+            return new PagedResponse<DatasetItemResponse> 
+            {
+                Items = items.Select(MapToResponse).ToList(),
+                TotalItems = totalCount,
+                Page = @params.Page,
+                PageSize = @params.PageSize
+            };
+        }
+
         public async Task<PagedResponse<DatasetItemResponse>> GetDataItemsByDatasetId(Guid datasetId, DatasetItemQueryParameters @params)
         {
             var (items, totalCount) = await _datasetItemRepository.GetAllByDatasetIdAsync(datasetId, @params);
@@ -66,13 +79,23 @@ namespace DataLabelProject.Business.Services.DatasetItems
 
             var uploaded = await fileUpload.ProcessAsync(request.File, storageKey);
 
-            var items = uploaded.Select(u => new DatasetItem
+            var hashes = uploaded.Select(u => u.Hash);
+            var existingHashes = await _datasetItemRepository.GetExistingHashes(datasetId, hashes);
+
+            var finalUploads = uploaded
+                .Where(u => !existingHashes.Contains(u.Hash))
+                .ToList();
+
+            if (finalUploads.Count == 0) return;
+
+            var items = finalUploads.Select(u => new DatasetItem
             {
                 DatasetItemId = u.FileId,
                 DatasetId = datasetId,
                 MediaType = u.ContentType,
                 StorageUri = u.StorageUri,
                 Metadata = u.Metadata,
+                ContentHash = u.Hash,
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -86,7 +109,6 @@ namespace DataLabelProject.Business.Services.DatasetItems
                     TaskId = null,
                     ProjectId = dataset.ProjectId.Value,
                     DatasetItemId = i.DatasetItemId,
-                    RevisionCount = 0,
                     Status = Models.Enums.LabelingTaskItemStatus.Unassigned
                 });
 

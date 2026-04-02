@@ -17,6 +17,7 @@ public class DatasetItemConfiguration : IEntityTypeConfiguration<DatasetItem>
         entity.Property(e => e.MediaType).HasColumnName("mediaType").HasColumnType("character varying");
         entity.Property(e => e.StorageUri).HasColumnName("storageUri");
         entity.Property(e => e.Metadata).HasColumnName("metadata").HasColumnType("jsonb").IsRequired();
+        entity.Property(e => e.ContentHash).HasColumnName("contentHash");
         entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql("now()");
 
         entity.HasOne(d => d.ItemDataset).WithMany(p => p.DatasetItems)

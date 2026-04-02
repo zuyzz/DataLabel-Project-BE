@@ -14,8 +14,6 @@ public partial class LabelingTaskItem
 
     public Guid DatasetItemId { get; set; }
 
-    public int RevisionCount { get; set; } = 0;
-
     public LabelingTaskItemStatus Status { get; set; } = LabelingTaskItemStatus.Unassigned;
 
     public virtual LabelingTask? Task { get; set; } = null!;
