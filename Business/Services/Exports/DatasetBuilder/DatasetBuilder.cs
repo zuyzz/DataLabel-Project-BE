@@ -26,14 +26,18 @@ public class DatasetBuilder : IDatasetBuilder
             .Select(di => di.DatasetItemId)
             .ToListAsync();
 
-        // Get only approved consensuses
+        // Get only consensuses that have an approved review.
+        var approvedConsensusIds = await _context.Reviews
+            .AsNoTracking()
+            .Where(r => r.Result == ReviewResult.Approved)
+            .Select(r => r.ConsensusId)
+            .ToListAsync();
+
         var consensuses = await _context.Consensuses
-        .AsNoTracking()
-        .Include(c => c.Review)
-        .Where(c => datasetItemIds.Contains(c.DatasetItemId)
-                && c.Review != null
-                && c.Review.Result == ReviewResult.Approved)
-        .ToListAsync();
+            .AsNoTracking()
+            .Where(c => datasetItemIds.Contains(c.DatasetItemId)
+                && approvedConsensusIds.Contains(c.ConsensusId))
+            .ToListAsync();
 
         var consensusByDatasetItemId = consensuses
             .GroupBy(c => c.DatasetItemId)
